@@ -1,0 +1,23 @@
+---
+import { SITE } from '../consts';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <p>© {year} {SITE.name} · 保留所有权利</p>
+    <div class="footer-links">
+      <a href="/rss.xml">RSS</a>
+      <a href={SITE.github} target="_blank" rel="me noopener noreferrer">GitHub</a>
+      <a href={`mailto:${SITE.email}`}>Email</a>
+      {
+        SITE.icp && (
+          <a class="icp" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
+            {SITE.icp}
+          </a>
+        )
+      }
+    </div>
+  </div>
+</footer>

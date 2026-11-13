@@ -1,0 +1,38 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { formatDate } from '../lib/format';
+
+interface Props {
+  work: CollectionEntry<'works'>;
+}
+
+const { work } = Astro.props;
+const { title, description, period, stack, cover } = work.data;
+const initial = title.trim().slice(0, 1);
+---
+
+<a class="card" href={`/works/${work.id}/`}>
+  <div class="card-cover">
+    {
+      cover ? (
+        <img src={cover} alt={`${title} 封面`} loading="lazy" width="640" height="360" />
+      ) : (
+        <span class="initial" aria-hidden="true">{initial}</span>
+      )
+    }
+  </div>
+  <div class="card-body">
+    <span class="card-kicker">{period || formatDate(work.data.date)}</span>
+    <h3>{title}</h3>
+    <p>{description}</p>
+    {
+      stack.length > 0 && (
+        <div class="tag-row">
+          {stack.slice(0, 3).map((s) => (
+            <span class="tag">{s}</span>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</a>

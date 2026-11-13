@@ -1,0 +1,59 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { byDateDesc, formatDate, yearOf } from '../../lib/format';
+
+const notes = (await getCollection('notes', ({ data }) => !data.draft)).sort(byDateDesc);
+
+const groups = new Map<string, typeof notes>();
+for (const note of notes) {
+  const year = yearOf(note.data.date);
+  if (!groups.has(year)) groups.set(year, []);
+  groups.get(year)?.push(note);
+}
+
+const years = [...groups.keys()].sort((a, b) => Number(b) - Number(a));
+---
+
+<BaseLayout title="资料" description="学习笔记、方法论与复盘：把过程写成可以复用的东西。">
+  <div class="page-head">
+    <div class="container">
+      <p class="eyebrow">Notes · 学习资料</p>
+      <h1 class="page-title">资料</h1>
+      <p class="page-desc">按时间归档的学习笔记、方法论与复盘。每条都尽量写清「问题是什么、怎么验证、结论是什么」。</p>
+      <div class="meta-bar">
+        <span>共 {notes.length} 篇</span>
+        <span class="dot-sep">/</span>
+        <span>{years.length} 个年份</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="article">
+    <div class="container">
+      {
+        notes.length > 0 ? (
+          years.map((year) => (
+            <section>
+              <h2 class="year-heading">{year}</h2>
+              <div class="rows">
+                {groups.get(year)?.map((note) => (
+                  <a class="row" href={`/notes/${note.id}/`}>
+                    <time datetime={note.data.date.toISOString()}>{formatDate(note.data.date)}</time>
+                    <div>
+                      <h3>{note.data.title}</h3>
+                      {note.data.description && <p>{note.data.description}</p>}
+                    </div>
+                    <span class="arrow" aria-hidden="true">→</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <div class="empty">还没有资料。在 <code>src/content/notes/</code> 里新增一个 Markdown 文件即可。</div>
+        )
+      }
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../consts';
+---
+
+<BaseLayout title="关于" description={`关于 ${SITE.name}：关注方向、联系方式与本站说明。`}>
+  <div class="page-head">
+    <div class="container">
+      <p class="eyebrow">About · 关于</p>
+      <h1 class="page-title">关于</h1>
+      <p class="page-desc">{SITE.tagline}</p>
+    </div>
+  </div>
+
+  <div class="article">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-text">
+          {SITE.intro.map((p) => <p>{p}</p>)}
+
+          <h2 class="section-title" style="font-size: 1.2rem; margin: 2.2rem 0 0.8rem">这个站怎么用</h2>
+          <p>
+            「资料」是学习过程的归档，偏向笔记与复盘；「作品」是能拿出去讲的东西，偏向结果与证据。
+            两者都按时间排序，方便对照「当时怎么想」和「后来怎么做」。
+          </p>
+
+          <h2 class="section-title" style="font-size: 1.2rem; margin: 2.2rem 0 0.8rem">版权与免责</h2>
+          <p>
+            站内原创内容采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
+            许可，转载请注明出处。引用的第三方资料版权归原作者所有，仅供学习交流；如有不当，请联系我删除。
+          </p>
+          <p>站内观点仅代表个人，与所在单位无关。</p>
+        </div>
+
+        <aside>
+          <div class="panel">
+            <h3>联系方式</h3>
+            <dl>
+              <dt>邮箱</dt>
+              <dd><a href={`mailto:${SITE.email}`}>{SITE.email}</a></dd>
+              <dt>GitHub</dt>
+              <dd><a href={SITE.github} target="_blank" rel="me noopener noreferrer">@{SITE.github.split('/').pop()}</a></dd>
+              <dt>所在地</dt>
+              <dd>{SITE.location}</dd>
+            </dl>
+          </div>
+
+          <div class="panel">
+            <h3>关注方向</h3>
+            <div class="tag-row">
+              {SITE.focus.map((f) => <span class="tag">{f}</span>)}
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>本站</h3>
+            <dl>
+              <dt>框架</dt>
+              <dd>Astro</dd>
+              <dt>托管</dt>
+              <dd>Cloudflare Pages</dd>
+              <dt>更新</dt>
+              <dd>不定期</dd>
+            </dl>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

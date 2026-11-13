@@ -1,0 +1,23 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.astro/
+
+# 环境变量（永远不要提交）
+.env
+.env.*
+!.env.example
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 私密素材：只放本地，永不入库
+private/
+*.pdf
+*.docx
+*.key
+*.pem
+id_rsa*
