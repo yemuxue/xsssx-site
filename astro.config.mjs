@@ -12,6 +12,8 @@ export default defineConfig({
   trailingSlash: 'always',
   build: {
     format: 'directory',
+    // CSS 内联进 HTML：跨境访问时少一次往返（每个 RTT 约 200–300ms）
+    inlineStylesheets: 'always',
   },
   server: {
     host: true,
