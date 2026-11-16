@@ -1,4 +1,26 @@
-# 上线：Cloudflare Pages
+# 上线：Cloudflare Workers（当前方案）
+
+**当前实际部署**：Cloudflare **Worker** + Wrangler Builds，地址
+`https://xsssx-site.xxxsss0723.workers.dev`
+
+关键配置（踩过的四个坑，改之前先看）：
+
+| 项 | 值 | 说明 |
+|---|---|---|
+| `.nvmrc` | `24` | Astro 7 要求 Node ≥ 22.23.4；写 22.12 会直接构建失败 |
+| `wrangler.toml` | `[assets] directory = "./dist"` | Worker 需要它才知道静态文件在哪 |
+| Deploy command | `npx wrangler deploy` | 不能写 `wrangler pages deploy`，那是 Pages 的命令 |
+| `not_found_handling` | `404-page` | 资源不存在时返回 `dist/404.html` |
+
+`package.json` 的 `packageManager` 锁在 `pnpm@10.34.9`：pnpm 11 要求 Node ≥ 22.13，
+和 `.nvmrc` 容易打架，锁 10.x 最稳。
+
+> 下面是 Pages 流程，保留作备选：如果你以后想要 `xxx.pages.dev` 域名，
+> 删掉 `wrangler.toml`、新建 Pages 项目即可，其余步骤相同。
+
+---
+
+# 备选：Cloudflare Pages
 
 目标：`https://yourdomain.com` 公网可访问、HTTPS、自动部署。
 
