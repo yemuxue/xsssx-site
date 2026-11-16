@@ -3,7 +3,6 @@ title: '为什么我不训练模型：504 次调用后的一点结论'
 description: '三个多模态模型、504 次 API 调用、一张物理色卡。结论是：修输入比换模型划算，而且划算得多。'
 date: 2026-11-16
 tags: ['多模态评测', '方法论', '色彩科学']
-cover: '/covers/colorcheck/cover.png'
 ---
 
 > 相关作品：[ColorCheck Probe：色彩感知的退化探针](/works/colorcheck-probe/)

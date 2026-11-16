@@ -7,29 +7,19 @@ interface Props {
 }
 
 const { note } = Astro.props;
-const { title, description, tags, cover } = note.data;
-const initial = title.trim().slice(0, 1);
+const { title, description, tags } = note.data;
 ---
 
 <a class="card" href={`/notes/${note.id}/`}>
-  <div class="card-cover">
-    {
-      cover ? (
-        <img src={cover} alt={`${title} 配图`} loading="lazy" width="640" height="360" />
-      ) : (
-        <span class="initial" aria-hidden="true">{initial}</span>
-      )
-    }
-    {!cover && tags?.[0] && <span class="cover-tag">{tags[0]}</span>}
-  </div>
   <div class="card-body">
+    {tags?.[0] && <span class="note-chip">{tags[0]}</span>}
     <span class="card-kicker">{formatDate(note.data.date)}</span>
     <h3>{title}</h3>
     <p>{description}</p>
     {
-      tags.length > 0 && (
+      tags.length > 1 && (
         <div class="tag-row">
-          {tags.slice(0, 3).map((t) => (
+          {tags.slice(1, 4).map((t) => (
             <span class="tag">{t}</span>
           ))}
         </div>
@@ -39,18 +29,15 @@ const initial = title.trim().slice(0, 1);
 </a>
 
 <style>
-  .cover-tag {
-    position: absolute;
-    top: 0.8rem;
-    left: 0.9rem;
+  .note-chip {
+    align-self: flex-start;
     padding: 0.15rem 0.5rem;
     font-family: var(--font-mono);
     font-size: 0.66rem;
     letter-spacing: 0.04em;
     color: var(--accent);
-    background: color-mix(in srgb, var(--bg-elev) 82%, transparent);
     border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     border-radius: 999px;
-    backdrop-filter: blur(4px);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
 </style>
