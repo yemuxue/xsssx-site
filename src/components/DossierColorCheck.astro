@@ -268,6 +268,12 @@ const decisions = [
           </a>
         ))}
       </div>
+
+      <a class="further" href="/notes/colorcheck-method/">
+        <span class="fk">延伸阅读</span>
+        <span class="ft">为什么我不训练模型：504 次调用后的一点结论</span>
+        <span class="fa" aria-hidden="true">→</span>
+      </a>
     </div>
   </section>
 </article>
@@ -747,6 +753,45 @@ const decisions = [
     transition: transform 0.25s var(--ease), color 0.25s;
   }
   .evidence-card:hover .arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  .further {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-top: 1.6rem;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elev);
+    transition: transform 0.25s var(--ease), border-color 0.25s;
+  }
+  .further:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    color: inherit;
+  }
+  .further .fk {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .further .ft {
+    font-size: 0.94rem;
+    font-weight: 550;
+    color: var(--text);
+  }
+  .further .fa {
+    margin-left: auto;
+    color: var(--border-strong);
+    transition: transform 0.25s var(--ease), color 0.25s;
+  }
+  .further:hover .fa {
     color: var(--accent);
     transform: translateX(3px);
   }
