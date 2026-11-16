@@ -1,0 +1,50 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { formatDate } from '../lib/format';
+
+interface Props {
+  note: CollectionEntry<'notes'>;
+}
+
+const { note } = Astro.props;
+const { title, description, tags } = note.data;
+const initial = title.trim().slice(0, 1);
+---
+
+<a class="card" href={`/notes/${note.id}/`}>
+  <div class="card-cover">
+    <span class="initial" aria-hidden="true">{initial}</span>
+    {tags?.[0] && <span class="cover-tag">{tags[0]}</span>}
+  </div>
+  <div class="card-body">
+    <span class="card-kicker">{formatDate(note.data.date)}</span>
+    <h3>{title}</h3>
+    <p>{description}</p>
+    {
+      tags.length > 0 && (
+        <div class="tag-row">
+          {tags.slice(0, 3).map((t) => (
+            <span class="tag">{t}</span>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</a>
+
+<style>
+  .cover-tag {
+    position: absolute;
+    top: 0.8rem;
+    left: 0.9rem;
+    padding: 0.15rem 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--bg-elev) 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 999px;
+    backdrop-filter: blur(4px);
+  }
+</style>

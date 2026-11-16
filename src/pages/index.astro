@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import WorkCard from '../components/WorkCard.astro';
+import NoteCard from '../components/NoteCard.astro';
 import { SITE, FEATURED_LIMIT, LATEST_NOTES_LIMIT } from '../consts';
 import { byDateDesc, formatDate } from '../lib/format';
 
@@ -63,16 +64,9 @@ const latest = notes.slice(0, LATEST_NOTES_LIMIT);
 
       {
         latest.length > 0 ? (
-          <div class="rows">
+          <div class="cards">
             {latest.map((note) => (
-              <a class="row" href={`/notes/${note.id}/`}>
-                <time datetime={note.data.date.toISOString()}>{formatDate(note.data.date)}</time>
-                <div>
-                  <h3>{note.data.title}</h3>
-                  {note.data.description && <p>{note.data.description}</p>}
-                </div>
-                <span class="arrow" aria-hidden="true">→</span>
-              </a>
+              <NoteCard note={note} />
             ))}
           </div>
         ) : (
