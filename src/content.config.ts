@@ -9,6 +9,8 @@ const notes = defineCollection({
     description: z.string().default(''),
     date: z.coerce.date(),
     tags: z.array(z.string()).default([]),
+    /** 标题图（放在 public/ 下）；不填则用首字占位 */
+    cover: z.string().optional(),
     /** 草稿不会出现在列表、RSS 与 sitemap 中 */
     draft: z.boolean().default(false),
   }),

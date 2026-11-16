@@ -35,4 +35,4 @@ export const SITE = {
 /** 首页「精选作品」最多展示几个 */
 export const FEATURED_LIMIT = 3;
 /** 首页「最近更新」最多展示几条 */
-export const LATEST_NOTES_LIMIT = 5;
+export const LATEST_NOTES_LIMIT = 3;

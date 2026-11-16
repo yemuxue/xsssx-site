@@ -7,14 +7,20 @@ interface Props {
 }
 
 const { note } = Astro.props;
-const { title, description, tags } = note.data;
+const { title, description, tags, cover } = note.data;
 const initial = title.trim().slice(0, 1);
 ---
 
 <a class="card" href={`/notes/${note.id}/`}>
   <div class="card-cover">
-    <span class="initial" aria-hidden="true">{initial}</span>
-    {tags?.[0] && <span class="cover-tag">{tags[0]}</span>}
+    {
+      cover ? (
+        <img src={cover} alt={`${title} 配图`} loading="lazy" width="640" height="360" />
+      ) : (
+        <span class="initial" aria-hidden="true">{initial}</span>
+      )
+    }
+    {!cover && tags?.[0] && <span class="cover-tag">{tags[0]}</span>}
   </div>
   <div class="card-body">
     <span class="card-kicker">{formatDate(note.data.date)}</span>

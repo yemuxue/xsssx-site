@@ -3,6 +3,7 @@ title: '评测的可信度来自哪里：一次把精确率改小的复盘'
 description: '82.0% 不是我最好的数字，却是我最敢引用的数字。记录 124 条标注的逐条审计、6 条标反的修正，以及两条提召回路径为什么被证伪。'
 date: 2026-11-16
 tags: ['LLM 评测', '方法论', '代码审查']
+cover: '/covers/cra-cover.png'
 ---
 
 > 相关作品：[Code Review Agent：可信代码审查](/works/code-review-agent/)

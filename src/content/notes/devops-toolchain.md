@@ -3,6 +3,7 @@ title: 'DevOps 工具链全景：从需求到上线，谁负责什么'
 description: '一条链路上的四层工具、三条铁律、六张能力域表。重点不是「有哪些工具」，而是「每个工具做到哪、做不到哪」。'
 date: 2026-11-16
 tags: ['DevOps', '工具链', '需求工程']
+cover: '/covers/devops/cover.png'
 ---
 
 > 完整笔记（含 16 阶段详解与 DOORS 实操）在 [GitHub](https://github.com/yemuxue/devops-toolchain-notes)。
