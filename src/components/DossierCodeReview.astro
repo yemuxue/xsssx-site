@@ -7,27 +7,45 @@
 const evidence = [
   {
     n: '1',
+    kind: '站内',
+    title: '产品需求文档（PRD）',
+    desc: '用户问题、竞品与机会、MVP 范围与验收指标',
+    href: '/docs/code-review-agent/prd.html',
+  },
+  {
+    n: '2',
+    kind: '站内',
+    title: '可用性测试报告',
+    desc: '基于可点击原型的角色模拟测试，非真实用户访谈',
+    href: '/docs/code-review-agent/usability.html',
+  },
+  {
+    n: '3',
+    kind: '站内',
+    title: '可点击原型',
+    desc: '单文件 HTML，无外部依赖；页面内数字均为示意数据',
+    href: '/prototype/',
+  },
+  {
+    n: '4',
+    kind: '仓库',
     title: '评测基线：严格标准下的精确优先',
     desc: '82.0% / 51.2% / 0.63 的口径、审计范围与已知局限',
     href: 'https://github.com/yemuxue/code-review-agent/blob/main/docs/eval-baseline.md',
   },
   {
-    n: '2',
+    n: '5',
+    kind: '仓库',
     title: '技术报告',
     desc: '运行时架构、LangGraph 编排、数据库设计',
     href: 'https://github.com/yemuxue/code-review-agent/blob/main/docs/technical-report.md',
   },
   {
-    n: '3',
+    n: '6',
+    kind: '仓库',
     title: '企业级差距分析',
     desc: '主动列出的九类产品化缺口，而不是只讲优点',
     href: 'https://github.com/yemuxue/code-review-agent/blob/main/docs/industrial-gaps.md',
-  },
-  {
-    n: '4',
-    title: '可点击原型源码',
-    desc: '单文件 HTML，无外部依赖；页面内数字均为示意数据',
-    href: '/prototype/',
   },
 ];
 ---
@@ -148,14 +166,17 @@ const evidence = [
 
   <section class="block">
     <div class="container">
-      <h2><span class="idx">05</span>证据</h2>
+      <h2><span class="idx">05</span>资料与证据</h2>
       <div class="evidence">
         {
           evidence.map((item) => (
             <a class="evidence-card" href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">
               <span class="en">[{item.n}]</span>
               <span class="et">
-                <strong>{item.title}</strong>
+                <strong>
+                  {item.title}
+                  <span class:list={['kind', item.kind === '站内' ? 'kind-local' : 'kind-repo']}>{item.kind}</span>
+                </strong>
                 <em>{item.desc}</em>
               </span>
               <span class="arrow" aria-hidden="true">→</span>
@@ -499,6 +520,25 @@ const evidence = [
     font-size: 0.8rem;
     color: var(--muted);
     line-height: 1.5;
+  }
+  .evidence-card .kind {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    vertical-align: 2px;
+  }
+  .evidence-card .kind-local {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .evidence-card .kind-repo {
+    color: var(--muted);
+    background: var(--bg-soft);
   }
   .evidence-card .arrow {
     margin-left: auto;
