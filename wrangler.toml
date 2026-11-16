@@ -1,0 +1,10 @@
+# Cloudflare Worker 静态资源配置
+# 这个项目在 Cloudflare 上是 Worker（不是 Pages），
+# 部署命令 `wrangler deploy` 需要知道把哪个目录当静态资源上传。
+name = "xsssx-site"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./dist"
+# 访问不存在的路径时返回 dist/404.html（Astro 已生成）
+not_found_handling = "404-page"
