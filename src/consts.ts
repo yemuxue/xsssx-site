@@ -17,7 +17,9 @@ export const SITE = {
   ],
   /** 关注方向 / 技能标签 */
   focus: ['资料归档', '项目作品', '持续记录'],
-  email: '2782830732@qq.com',
+  email: 'xxxsss0723@gmail.com',
+  /** GitHub 账号关联邮箱 */
+  githubEmail: '2782830732@qq.com',
   github: 'https://github.com/yemuxue/',
   /** GitHub 用户名（用于展示 @handle，避免从 URL 截取时带上尾斜杠） */
   githubHandle: 'yemuxue',

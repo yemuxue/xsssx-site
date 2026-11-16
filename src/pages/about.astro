@@ -39,7 +39,10 @@ import { SITE } from '../consts';
               <dt>邮箱</dt>
               <dd><a href={`mailto:${SITE.email}`}>{SITE.email}</a></dd>
               <dt>GitHub</dt>
-              <dd><a href={SITE.github} target="_blank" rel="me noopener noreferrer">@{SITE.githubHandle}</a></dd>
+              <dd>
+                <a href={SITE.github} target="_blank" rel="me noopener noreferrer">@{SITE.githubHandle}</a>
+                <span class="dd-sub"><a href={`mailto:${SITE.githubEmail}`}>{SITE.githubEmail}</a></span>
+              </dd>
               <dt>所在地</dt>
               <dd>{SITE.location}</dd>
             </dl>
@@ -68,3 +71,19 @@ import { SITE } from '../consts';
     </div>
   </div>
 </BaseLayout>
+
+<style>
+  .dd-sub {
+    display: block;
+    margin-top: 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .dd-sub a {
+    color: inherit;
+  }
+  .dd-sub a:hover {
+    color: var(--accent);
+  }
+</style>
