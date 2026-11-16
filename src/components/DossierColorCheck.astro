@@ -1,0 +1,789 @@
+---
+/**
+ * 作品页：ColorCheck Probe
+ * 主题：研究档案（与 Code Review Agent 同一套版式）
+ */
+const evidence = [
+  {
+    n: '1',
+    kind: '仓库',
+    title: 'colorcheck-pipeline 源码',
+    desc: '单文件 1189 行，numpy + Pillow，零 OpenCV',
+    href: 'https://github.com/yemuxue/colorcheck-pipeline',
+  },
+  {
+    n: '2',
+    kind: '站内',
+    title: '实验数据（JSONL）',
+    desc: '3 模型 × 144 条基线 + 72 条校正对照，逐条含回答与 ΔE',
+    href: '/data/colorcheck/results.zip',
+  },
+  {
+    n: '3',
+    kind: '站内',
+    title: '受控刺激图',
+    desc: '24 色卡 × 6 种退化，全部由已知色值合成',
+    href: '/data/colorcheck/stimuli.zip',
+  },
+];
+
+const baseline = [
+  { model: 'Kimi K3', clean: 95.8, mild: 91.7, strong: 62.5, noise: 83.3, dark: 70.8, jpeg: 83.3, overall: 81.2, de: 7.26 },
+  { model: 'GLM-5.3-Flash', clean: 83.3, mild: 79.2, strong: 41.7, noise: 75.0, dark: 70.8, jpeg: 70.8, overall: 70.1, de: 7.05 },
+  { model: 'DeepSeek V4.1', clean: 70.8, mild: 70.8, strong: 45.8, noise: 79.2, dark: 45.8, jpeg: 62.5, overall: 62.5, de: 7.16 },
+];
+
+const ab = [
+  { model: 'Kimi K3', before: 62.5, after: 87.5, d: 25.0, deB: 10.47, deA: 3.42 },
+  { model: 'GLM-5.3-Flash', before: 41.7, after: 75.0, d: 33.3, deB: 10.28, deA: 4.73 },
+  { model: 'DeepSeek V4.1', before: 45.8, after: 62.5, d: 16.7, deB: 8.71, deA: 2.91 },
+];
+
+const decisions = [
+  {
+    n: '01',
+    title: '选型：先看退化条件，再看平均分',
+    body: 'Kimi K3 在 6 个条件里赢了 5 个，但强偏色下跌到 62.5%、ΔE 10.47，和另外两个没有数量级差距。选型时应该问「我的场景最怕哪种退化」，而不是「谁的总分高」。',
+    note: '依据：分条件准确率与 ΔE',
+  },
+  {
+    n: '02',
+    title: '输入规范：曝光和白平衡比模型更值钱',
+    body: '强偏色让最好的模型掉 29 个百分点，欠曝让 ΔE 从 2.45 涨到 17.25。约束拍摄条件比换模型便宜得多，收益也更确定。',
+    note: '依据：clean vs strong vs dark',
+  },
+  {
+    n: '03',
+    title: '降级：检测到偏色就重拍，不要硬答',
+    body: '低照度下 ΔE 翻 7 倍，模型仍在「自信作答」。产品需要一道护栏：先判断输入质量，不达标就提示重拍或先校正，而不是把错误答案直接给用户。',
+    note: '依据：A/B 干预实验',
+  },
+];
+---
+
+<article class="dossier">
+  <div class="container">
+    <header class="dossier-hero">
+      <p class="eyebrow">作品 · 2026</p>
+      <h1>ColorCheck Probe<span class="dot">.</span></h1>
+      <p class="lead">
+        用 <strong>CIEDE2000</strong> 给多模态模型量一量：照片偏色、欠曝、压缩之后，它还认得出颜色吗？
+      </p>
+      <div class="meta">
+        <span>2026.10 – 2026.11</span>
+        <span>独立完成</span>
+        <span>Python · 色彩科学 · 多模态评测</span>
+      </div>
+    </header>
+
+    <section class="results" aria-label="核心结果">
+      <div class="metric">
+        <span class="num">95.8<em>%</em></span>
+        <span class="label">受控条件下可用</span>
+        <span class="note">Kimi K3 · 干净图</span>
+      </div>
+      <div class="metric">
+        <span class="num">−29<em>pp</em></span>
+        <span class="label">强偏色后的跌幅</span>
+        <span class="note">91.7% → 62.5%</span>
+      </div>
+      <div class="metric">
+        <span class="num">+25<em>pp</em></span>
+        <span class="label">校正输入后回升</span>
+        <span class="note">不换模型 · 三个平均</span>
+      </div>
+      <p class="results-note">
+        3 个模型 × 144 张受控图；另做 72 次「校正前 / 校正后」对照。全部数据与脚本可复算。
+      </p>
+    </section>
+  </div>
+
+  <section class="block">
+    <div class="container narrow">
+      <h2><span class="idx">01</span>问题</h2>
+      <p>
+        多模态模型正在被大量用于「看图」的场景：商品主图、设计稿比对、质检初筛。颜色是这些场景里少数能用物理量衡量的维度，但绝大多数评测用的是自然图片加人工标注，缺少一把可复现的尺子。
+      </p>
+      <p>
+        所以问题不是「模型认不认得颜色」，而是两个更具体的：
+        <strong>偏色、欠曝、压缩之后，它的判断会退化多少？</strong>以及
+        <strong>要提升，应该修输入还是换模型？</strong>
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">02</span>做法</h2>
+      <div class="grid-3">
+        <div class="card">
+          <h3>先造一把尺子</h3>
+          <p>colorcheck-pipeline 把 24 色卡照片校成标准色值，逐块给出 CIEDE2000。单文件 1189 行，只用 numpy + Pillow。</p>
+        </div>
+        <div class="card">
+          <h3>再造成受控刺激</h3>
+          <p>用已知色值合成色卡，施加 6 种退化：干净、轻偏色、强偏色、噪声、欠曝、JPEG。ground truth 是物理量，不是人工标签。</p>
+        </div>
+        <div class="card">
+          <h3>最后用 ΔE 打分</h3>
+          <p>每次让模型报出颜色名和近似 hex：名字算准确率，hex 换算成 ΔE00。两套指标分别测「分类」和「测量」。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">03</span>结果</h2>
+      <p class="block-lead">同一批 144 张图，三个模型的准确率。行是模型，列是退化条件。</p>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>模型</th><th>干净</th><th>轻偏色</th><th>强偏色</th><th>噪声</th><th>欠曝</th><th>JPEG</th><th>总体</th>
+            </tr>
+          </thead>
+          <tbody>
+            {baseline.map((r) => (
+              <tr>
+                <th scope="row">{r.model}</th>
+                <td class="hi">{r.clean}%</td>
+                <td>{r.mild}%</td>
+                <td class="lo">{r.strong}%</td>
+                <td>{r.noise}%</td>
+                <td class="lo">{r.dark}%</td>
+                <td>{r.jpeg}%</td>
+                <td class="total">{r.overall}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="figcaption">表 1 · 24 选 1 色名准确率，每格 24 条样本；随机水平约 4%</p>
+
+      <div class="findings">
+        <div class="finding">
+          <span class="fk">发现 01</span>
+          <p>强偏色是所有模型的共同分水岭：最好的 Kimi 也从 91.7% 掉到 62.5%，另外两个直接掉到 42–46%。</p>
+        </div>
+        <div class="finding">
+          <span class="fk">发现 02</span>
+          <p>叫得准不等于测得准。Kimi 准确率最高（81.2%），但平均 ΔE 7.26 并不优于 GLM 的 7.05——它更会把颜色归大类，说不出准确色值。</p>
+        </div>
+        <div class="finding">
+          <span class="fk">发现 03</span>
+          <p>欠曝对 ΔE 伤害最大：Kimi 从 2.45 涨到 17.25。它还能蒙对「都是灰」，但具体色值已经完全失真。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">04</span>干预：修输入还是换模型</h2>
+      <p class="block-lead">
+        拿同一张强偏色图，先用 colorcheck 校正（ΔE 从 6.78 降到 0.56），再问同样的问题。模型、提示词、问题顺序全部不变。
+      </p>
+
+      <div class="ab">
+        {ab.map((r) => (
+          <div class="ab-row">
+            <div class="ab-name">{r.model}</div>
+            <div class="ab-bars">
+              <div class="bar bar-before">
+                <span>{r.before}%</span>
+                <i style={`width:${r.before}%`}></i>
+              </div>
+              <div class="bar bar-after">
+                <span>{r.after}%</span>
+                <i style={`width:${r.after}%`}></i>
+              </div>
+            </div>
+            <div class="ab-delta">+{r.d}pp</div>
+            <div class="ab-de">ΔE {r.deB} → {r.deA}</div>
+          </div>
+        ))}
+      </div>
+      <p class="figcaption">图 1 · 上条为校正前，下条为校正后；数字为色名准确率</p>
+
+      <p class="conclusion">
+        <strong>三个模型平均提升 25 个百分点，平均 ΔE 下降 62%。</strong>
+        模型一个没换，提示词一个字没改——收益全部来自输入治理。
+      </p>
+
+      <p class="caveat">
+        校正后仍有差距：Kimi 87.5%，低于干净图的 95.8%。因为强偏色造成的高光截断不可逆，校正只能救回大部分，不能全救。
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">05</span>三个决定</h2>
+      <p class="block-lead">数据能支撑的不只是「哪个模型好」，而是三个可以写进需求文档的判断。</p>
+
+      <div class="judgments">
+        {decisions.map((d) => (
+          <article class="judgment">
+            <div class="j-text">
+              <span class="j-num">判断 {d.n}</span>
+              <h3>{d.title}</h3>
+              <p>{d.body}</p>
+              <p class="j-evi">{d.note}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container narrow">
+      <h2><span class="idx">06</span>边界</h2>
+      <ul class="limits">
+        <li>刺激图是<strong>合成</strong>的，不是真实拍摄。它精确、可复现，但缺少真实相机的噪声分布与镜头特性。</li>
+        <li>「24 选 1」存在词汇歧义：<strong>天蓝 / 蓝色</strong>、<strong>砖红 / 红色</strong> 的边界本身模糊，会压低绝对准确率。</li>
+        <li>每个条件只有 24 条样本，<strong>单次运行</strong>，未做重复性与模型版本锁定。</li>
+        <li>只测颜色感知，<strong>不测语义理解、OCR、空间关系</strong>；结论是工程可用性判断，不是模型排行榜。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">07</span>资料</h2>
+      <div class="evidence">
+        {evidence.map((item) => (
+          <a class="evidence-card" href={item.href} target="_blank" rel="noopener noreferrer">
+            <span class="en">[{item.n}]</span>
+            <span class="et">
+              <strong>
+                {item.title}
+                <span class:list={['kind', item.kind === '站内' ? 'kind-local' : 'kind-repo']}>{item.kind}</span>
+              </strong>
+              <em>{item.desc}</em>
+            </span>
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</article>
+
+<style>
+  .dossier {
+    padding-bottom: 4rem;
+    overflow-x: clip;
+  }
+  .dossier-hero {
+    padding: clamp(1.6rem, 4vw, 2.6rem) 0 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .dossier-hero .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .dossier-hero h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin-bottom: 1rem;
+  }
+  .dossier-hero h1 .dot {
+    color: var(--accent);
+  }
+  .lead {
+    max-width: 30em;
+    font-size: clamp(1.02rem, 2vw, 1.16rem);
+    color: var(--text-soft);
+    line-height: 1.8;
+  }
+  .lead strong {
+    color: var(--text);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.2rem;
+    margin-top: 1.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .results {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.4rem 0 0.8rem;
+  }
+  .metric {
+    background: var(--bg-elev);
+    padding: 1.35rem 1.4rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .metric .num {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 4px;
+    font-family: var(--font-serif);
+    font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .metric .num em {
+    font-style: normal;
+    font-size: 0.5em;
+    margin-left: 0.1em;
+  }
+  .metric .num::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    animation: grow 0.7s var(--ease) 0.22s both;
+  }
+  .results .metric:nth-child(2) .num::after {
+    animation-delay: 0.34s;
+  }
+  .results .metric:nth-child(3) .num::after {
+    animation-delay: 0.46s;
+  }
+  .metric .label {
+    font-size: 0.86rem;
+    color: var(--text);
+    font-weight: 550;
+  }
+  .metric .note {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .results-note {
+    grid-column: 1 / -1;
+    background: var(--bg-elev);
+    padding: 0.85rem 1.4rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  .block {
+    padding: clamp(2.4rem, 5vw, 3.6rem) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .block:last-of-type {
+    border-bottom: 0;
+  }
+  .container.narrow > * {
+    max-width: 46rem;
+  }
+  .block h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.3rem, 2.6vw, 1.62rem);
+    letter-spacing: -0.02em;
+    margin-bottom: 1.1rem;
+  }
+  .block h2 .idx {
+    display: inline-block;
+    min-width: 2.1rem;
+    font-family: var(--font-mono);
+    font-size: 0.72em;
+    color: var(--accent);
+    margin-right: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .block p {
+    color: var(--text-soft);
+    line-height: 1.85;
+    font-size: 1rem;
+  }
+  .block p + p {
+    margin-top: 1rem;
+  }
+  .block code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+  .block-lead {
+    max-width: 52ch;
+    color: var(--muted);
+    font-size: 0.94rem;
+    line-height: 1.8;
+    margin-bottom: 1.6rem;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    padding: 1.2rem 1.25rem;
+    transition: border-color 0.3s var(--ease), transform 0.3s var(--ease);
+  }
+  .card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+  .card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    min-width: 40rem;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 0.6rem 0.7rem;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  .data-table thead th {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  .data-table thead th:first-child,
+  .data-table tbody th {
+    text-align: left;
+  }
+  .data-table tbody th {
+    font-weight: 550;
+    color: var(--text);
+  }
+  .data-table td {
+    color: var(--text-soft);
+  }
+  .data-table .hi {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .data-table .lo {
+    color: #b45309;
+    font-weight: 600;
+  }
+  .data-table .total {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .data-table tbody tr:hover {
+    background: var(--bg-soft);
+  }
+  .figcaption {
+    margin-top: 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+  }
+
+  .findings {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 1.8rem;
+  }
+  .finding {
+    display: grid;
+    grid-template-columns: 5.2rem 1fr;
+    gap: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--border);
+  }
+  .finding .fk {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+  }
+  .finding p {
+    font-size: 0.94rem;
+    line-height: 1.8;
+    color: var(--text-soft);
+  }
+
+  .ab {
+    display: grid;
+    gap: 1.4rem;
+  }
+  .ab-row {
+    display: grid;
+    grid-template-columns: 9rem 1fr 5rem 9rem;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--border);
+  }
+  .ab-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .ab-name {
+    font-weight: 550;
+    font-size: 0.92rem;
+  }
+  .ab-bars {
+    display: grid;
+    gap: 0.35rem;
+  }
+  .bar {
+    position: relative;
+    height: 22px;
+    background: var(--bg-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    display: block;
+    border-radius: 4px;
+  }
+  .bar span {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text);
+  }
+  .bar-before i {
+    background: color-mix(in srgb, #b45309 45%, transparent);
+  }
+  .bar-after i {
+    background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .ab-delta {
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .ab-de {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+  }
+
+  .conclusion {
+    margin-top: 2rem;
+    padding: 1rem 1.15rem;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-elev);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: 0.96rem;
+    line-height: 1.8;
+  }
+  .conclusion strong {
+    color: var(--text);
+  }
+  .caveat {
+    margin-top: 1rem;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .judgments {
+    display: grid;
+    gap: clamp(1.6rem, 3vw, 2.2rem);
+  }
+  .judgment {
+    padding-top: clamp(1.4rem, 3vw, 2rem);
+    border-top: 1px solid var(--border);
+  }
+  .judgment:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+  .j-num {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+  .j-text h3 {
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    margin-bottom: 0.55rem;
+  }
+  .j-text p {
+    font-size: 0.94rem;
+    line-height: 1.8;
+    color: var(--text-soft);
+    max-width: 62ch;
+  }
+  .j-text .j-evi {
+    margin-top: 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .limits {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .limits li {
+    position: relative;
+    padding-left: 1.5rem;
+    color: var(--text-soft);
+    line-height: 1.8;
+    font-size: 0.98rem;
+  }
+  .limits li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+
+  .evidence {
+    display: grid;
+    gap: 0.7rem;
+  }
+  .evidence-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.95rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elev);
+    transition: border-color 0.25s, transform 0.25s var(--ease);
+  }
+  .evidence-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+  .evidence-card .en {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--accent);
+    min-width: 2rem;
+  }
+  .evidence-card .et {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .evidence-card .et strong {
+    font-size: 0.94rem;
+    font-weight: 600;
+  }
+  .evidence-card .et em {
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .evidence-card .kind {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 500;
+    vertical-align: 2px;
+  }
+  .evidence-card .kind-local {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .evidence-card .kind-repo {
+    color: var(--muted);
+    background: var(--bg-soft);
+  }
+  .evidence-card .arrow {
+    margin-left: auto;
+    color: var(--border-strong);
+    transition: transform 0.25s var(--ease), color 0.25s;
+  }
+  .evidence-card:hover .arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  @keyframes rise {
+    from { transform: translateY(10px); }
+    to { transform: none; }
+  }
+  @keyframes grow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .dossier-hero {
+    animation: rise 0.55s var(--ease) both;
+  }
+  .results {
+    animation: rise 0.55s var(--ease) 0.08s both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dossier-hero,
+    .results,
+    .metric .num::after {
+      animation: none !important;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .results {
+      grid-template-columns: 1fr;
+    }
+    .ab-row {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+    .finding {
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+    }
+  }
+</style>

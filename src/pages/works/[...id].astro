@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DossierCodeReview from '../../components/DossierCodeReview.astro';
+import DossierColorCheck from '../../components/DossierColorCheck.astro';
 import { formatDate } from '../../lib/format';
 
 export async function getStaticPaths() {
@@ -17,18 +18,22 @@ const { Content } = await render(entry);
 const { title, description, role, period, stack, link, repo, date } = entry.data;
 
 // 定制版式：研究档案（Editorial Dossier）
-const isDossier = entry.id === 'code-review-agent';
+const dossierMap: Record<string, any> = {
+  'code-review-agent': DossierCodeReview,
+  'colorcheck-probe': DossierColorCheck,
+};
+const Dossier = dossierMap[entry.id];
 ---
 
 {
-  isDossier ? (
+  Dossier ? (
     <BaseLayout title={title} description={description} type="article">
       <div class="container" style="padding-top:1.4rem">
         <a class="back-link" href="/works/">
           <span aria-hidden="true">←</span> 返回作品
         </a>
       </div>
-      <DossierCodeReview />
+      <Dossier />
     </BaseLayout>
   ) : (
     <BaseLayout title={title} description={description} type="article">
