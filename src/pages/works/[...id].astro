@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import DossierCodeReview from '../../components/DossierCodeReview.astro';
 import { formatDate } from '../../lib/format';
 
 export async function getStaticPaths() {
@@ -14,35 +15,96 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await render(entry);
 const { title, description, role, period, stack, link, repo, date } = entry.data;
+
+// 定制版式：研究档案（Editorial Dossier）
+const isDossier = entry.id === 'code-review-agent';
 ---
 
-<BaseLayout title={title} description={description} type="article">
-  <div class="page-head">
-    <div class="container">
-      <a class="back-link" href="/works/"><span aria-hidden="true">←</span> 返回作品</a>
-      <h1 class="page-title">{title}</h1>
-      {description && <p class="page-desc">{description}</p>}
-      <div class="meta-bar">
-        <time datetime={date.toISOString()}>{formatDate(date)}</time>
-        {period && <><span class="dot-sep">/</span><span>{period}</span></>}
-        {role && <><span class="dot-sep">/</span><span>{role}</span></>}
+{
+  isDossier ? (
+    <BaseLayout title={title} description={description} type="article">
+      <div class="container" style="padding-top:1.4rem">
+        <a class="back-link" href="/works/">
+          <span aria-hidden="true">←</span> 返回作品
+        </a>
       </div>
-    </div>
-  </div>
+      <DossierCodeReview />
+    </BaseLayout>
+  ) : (
+    <BaseLayout title={title} description={description} type="article">
+      <div class="page-head">
+        <div class="container">
+          <a class="back-link" href="/works/">
+            <span aria-hidden="true">←</span> 返回作品
+          </a>
+          <h1 class="page-title">{title}</h1>
+          {description && <p class="page-desc">{description}</p>}
+          <div class="meta-bar">
+            <time datetime={date.toISOString()}>{formatDate(date)}</time>
+            {period && (
+              <>
+                <span class="dot-sep">/</span>
+                <span>{period}</span>
+              </>
+            )}
+            {role && (
+              <>
+                <span class="dot-sep">/</span>
+                <span>{role}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
 
-  <div class="article">
-    <div class="container">
-      <dl class="facts">
-        {role && <div class="fact"><dt>角色</dt><dd>{role}</dd></div>}
-        {period && <div class="fact"><dt>时间</dt><dd>{period}</dd></div>}
-        {stack.length > 0 && <div class="fact"><dt>技术 / 工具</dt><dd>{stack.join(' · ')}</dd></div>}
-        {link && <div class="fact"><dt>链接</dt><dd><a href={link} target="_blank" rel="noopener noreferrer">访问 →</a></dd></div>}
-        {repo && <div class="fact"><dt>代码</dt><dd><a href={repo} target="_blank" rel="noopener noreferrer">仓库 →</a></dd></div>}
-      </dl>
+      <div class="article">
+        <div class="container">
+          <dl class="facts">
+            {role && (
+              <div class="fact">
+                <dt>角色</dt>
+                <dd>{role}</dd>
+              </div>
+            )}
+            {period && (
+              <div class="fact">
+                <dt>时间</dt>
+                <dd>{period}</dd>
+              </div>
+            )}
+            {stack.length > 0 && (
+              <div class="fact">
+                <dt>技术 / 工具</dt>
+                <dd>{stack.join(' · ')}</dd>
+              </div>
+            )}
+            {link && (
+              <div class="fact">
+                <dt>链接</dt>
+                <dd>
+                  <a href={link} target="_blank" rel="noopener noreferrer">
+                    访问 →
+                  </a>
+                </dd>
+              </div>
+            )}
+            {repo && (
+              <div class="fact">
+                <dt>代码</dt>
+                <dd>
+                  <a href={repo} target="_blank" rel="noopener noreferrer">
+                    仓库 →
+                  </a>
+                </dd>
+              </div>
+            )}
+          </dl>
 
-      <article class="prose">
-        <Content />
-      </article>
-    </div>
-  </div>
-</BaseLayout>
+          <article class="prose">
+            <Content />
+          </article>
+        </div>
+      </div>
+    </BaseLayout>
+  )
+}

@@ -1,0 +1,546 @@
+---
+/**
+ * 作品页：Code Review Agent
+ * 主题：研究档案（Editorial Dossier）
+ * 规则：只用站点既有令牌；原型装进中性设备框；动效克制且可关闭。
+ */
+const evidence = [
+  {
+    n: '1',
+    title: '评测基线：严格标准下的精确优先',
+    desc: '82.0% / 51.2% / 0.63 的口径、审计范围与已知局限',
+    href: 'https://github.com/yemuxue/code-review-agent/blob/main/docs/eval-baseline.md',
+  },
+  {
+    n: '2',
+    title: '技术报告',
+    desc: '运行时架构、LangGraph 编排、数据库设计',
+    href: 'https://github.com/yemuxue/code-review-agent/blob/main/docs/technical-report.md',
+  },
+  {
+    n: '3',
+    title: '企业级差距分析',
+    desc: '主动列出的九类产品化缺口，而不是只讲优点',
+    href: 'https://github.com/yemuxue/code-review-agent/blob/main/docs/industrial-gaps.md',
+  },
+  {
+    n: '4',
+    title: '可点击原型源码',
+    desc: '单文件 HTML，无外部依赖；页面内数字均为示意数据',
+    href: '/prototype/code-review-agent.html',
+  },
+];
+---
+
+<article class="dossier">
+  <div class="container">
+    <header class="dossier-hero">
+      <p class="eyebrow">作品 · 2026</p>
+      <h1>Code Review Agent<span class="dot">.</span></h1>
+      <p class="lead">
+        把「AI 生成评论」做成<strong>可核验、可处理、可回滚</strong>的审查单元。
+      </p>
+      <div class="meta">
+        <span>2026.07 – 2026.11</span>
+        <span>独立开发</span>
+        <span>Python · LangGraph · FastAPI · Streamlit</span>
+      </div>
+    </header>
+
+    <section class="results" aria-label="核心结果">
+      <div class="metric">
+        <span class="num">100%</span>
+        <span class="label">高危缺陷召回</span>
+        <span class="note">4 / 4 · n=124</span>
+      </div>
+      <div class="metric">
+        <span class="num">82.0%</span>
+        <span class="label">精确率 Precision</span>
+        <span class="note">TP 41 · FP 9</span>
+      </div>
+      <div class="metric">
+        <span class="num">124</span>
+        <span class="label">判分完整性</span>
+        <span class="note">零跳过 · 零异常</span>
+      </div>
+      <p class="results-note">
+        数据集 v1.4.0：80 条正例 + 44 条负例，全部逐条审计；模型 <code>gpt-6-sol</code>，温度 0.0。
+      </p>
+    </section>
+  </div>
+
+  <section class="block">
+    <div class="container narrow">
+      <h2><span class="idx">01</span>问题</h2>
+      <p>
+        使用 PR 流程的团队，合入前的审查依赖人工 Reviewer。三个结构性痛点：审查时间与开发节奏错位（作者被阻塞、Reviewer 被打断）；低风险问题持续消耗高级工程师注意力；评论缺少可复现证据，作者不信任结论。
+      </p>
+      <p>
+        产品机会不是「再接一个模型入口」，而是把每个高风险问题变成<strong>可核验、可处理、可回滚的决策单元</strong>。
+      </p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">02</span>做法</h2>
+      <div class="grid-3">
+        <div class="card">
+          <h3>自研 Agent 循环</h3>
+          <p>LLM → 工具 → 观测的显式循环；流式解析 tool call、进程级沙箱、按危险程度分级的 HITL 审批。不依赖 Agent 框架。</p>
+        </div>
+        <div class="card">
+          <h3>LangGraph 多 Agent</h3>
+          <p>Plan → Send 并行验证 → Review 去重 → Fix → Verify。每一步都输出机器可读结构，可回放、可归因。</p>
+        </div>
+        <div class="card">
+          <h3>可复算的评测</h3>
+          <p>124 条标注、逐条审计、逐样本 LLM 判分；口径、引用规则与局限写进基线文档，数字可复算。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">03</span>可交互原型</h2>
+      <p class="caption-lead">
+        下面是可点击的工作台原型。所有界面数字均为<strong>示意数据</strong>，不是真实评测结果；真实数字以上方结果卡为准。
+      </p>
+
+      <div class="device">
+        <div class="device-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <em>prototype · 示意数据</em>
+          <a href="/prototype/code-review-agent.html" target="_blank" rel="noopener">全屏打开 ↗</a>
+        </div>
+        <div class="device-scroll">
+          <iframe
+            src="/prototype/code-review-agent.html"
+            title="可信代码审查 Agent 交互原型"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </div>
+      <p class="figcaption">图 1 · 任务列表与质量报告（桌面端布局，移动端可横向滚动）</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container narrow">
+      <h2><span class="idx">04</span>边界</h2>
+      <ul class="limits">
+        <li>
+          数据集是<strong>自建标注</strong>（124 条，来自第三方项目 <code>llm-agent-qa-system</code>），不是 SWE-bench 等公开基准，<strong>不可与业界数字横比</strong>。
+        </li>
+        <li>
+          总召回 51.2% 偏低：39 条漏报中 <strong>30 条属判据口径分歧</strong>（模型认为不该报、标注标准认为该报），仅 7 条是真实漏报。这是「精确优先」策略的结果，不是能力上限。
+        </li>
+        <li>
+          精确率曾从 94.0% <strong>下修到 82.0%</strong>：独立审计发现 6 条标注标反。数字变小是修正的结果，不是模型退化。
+        </li>
+        <li>
+          原型与可用性测试均为模拟，<strong>未做真实客户试点与长期 ROI 证明</strong>。
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="container">
+      <h2><span class="idx">05</span>证据</h2>
+      <div class="evidence">
+        {
+          evidence.map((item) => (
+            <a class="evidence-card" href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">
+              <span class="en">[{item.n}]</span>
+              <span class="et">
+                <strong>{item.title}</strong>
+                <em>{item.desc}</em>
+              </span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</article>
+
+
+<style>
+  .dossier {
+    padding-bottom: 4rem;
+    overflow-x: clip;
+  }
+
+  /* ---------- Hero ---------- */
+  .dossier-hero {
+    padding: clamp(1.6rem, 4vw, 2.6rem) 0 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .dossier-hero .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .dossier-hero h1 {
+    font-family: var(--font-serif);
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin-bottom: 1rem;
+  }
+  .dossier-hero h1 .dot {
+    color: var(--accent);
+  }
+  .lead {
+    max-width: 30em;
+    font-size: clamp(1.02rem, 2vw, 1.16rem);
+    color: var(--text-soft);
+    line-height: 1.8;
+  }
+  .lead strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.2rem;
+    margin-top: 1.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- 结果卡 ---------- */
+  .results {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 2.4rem 0 0.8rem;
+  }
+  .metric {
+    background: var(--bg-elev);
+    padding: 1.35rem 1.4rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .metric .num {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 4px;
+    font-family: var(--font-serif);
+    font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .metric .num::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    animation: grow 0.7s var(--ease) 0.22s both;
+  }
+  .results .metric:nth-child(2) .num::after {
+    animation-delay: 0.34s;
+  }
+  .results .metric:nth-child(3) .num::after {
+    animation-delay: 0.46s;
+  }
+  .metric .label {
+    font-size: 0.86rem;
+    color: var(--text);
+    font-weight: 550;
+  }
+  .metric .note {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .results-note {
+    grid-column: 1 / -1;
+    background: var(--bg-elev);
+    padding: 0.85rem 1.4rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  .results-note code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    background: var(--bg-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+
+  /* ---------- 区块 ---------- */
+  .block {
+    padding: clamp(2.4rem, 5vw, 3.6rem) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .block:last-of-type {
+    border-bottom: 0;
+  }
+  /* 窄栏不居中，与整页左边缘对齐 */
+  .container.narrow {
+    max-width: none;
+  }
+  .container.narrow > * {
+    max-width: 46rem;
+  }
+  .block h2 {
+    font-family: var(--font-serif);
+    font-size: clamp(1.3rem, 2.6vw, 1.62rem);
+    letter-spacing: -0.02em;
+    margin-bottom: 1.1rem;
+  }
+  .block h2 .idx {
+    font-family: var(--font-mono);
+    font-size: 0.72em;
+    color: var(--accent);
+    margin-right: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .block p {
+    color: var(--text-soft);
+    line-height: 1.85;
+    font-size: 1rem;
+  }
+  .block p + p {
+    margin-top: 1rem;
+  }
+  .block code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    padding: 1.2rem 1.25rem;
+    transition: border-color 0.3s var(--ease), transform 0.3s var(--ease);
+  }
+  .card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+  }
+  .card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  .card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ---------- 原型设备框 ---------- */
+  .caption-lead {
+    max-width: 52ch;
+    color: var(--muted);
+    font-size: 0.92rem;
+    margin-bottom: 1.4rem;
+  }
+  .device {
+    max-width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .device-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-soft);
+  }
+  .device-bar .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .device-bar em {
+    margin-left: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-style: normal;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .device-bar a {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+    transition: color 0.2s;
+  }
+  .device-bar a:hover {
+    color: var(--accent);
+  }
+  .device-scroll {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .device iframe {
+    display: block;
+    width: 100%;
+    min-width: 1040px;
+    height: 680px;
+    border: 0;
+    background: #fff;
+  }
+  .figcaption {
+    margin-top: 0.7rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- 边界 ---------- */
+  .limits {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .limits li {
+    position: relative;
+    padding-left: 1.5rem;
+    color: var(--text-soft);
+    line-height: 1.8;
+    font-size: 0.98rem;
+  }
+  .limits li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+  .limits strong {
+    color: var(--text);
+  }
+
+  /* ---------- 证据 ---------- */
+  .evidence {
+    display: grid;
+    gap: 0.7rem;
+  }
+  .evidence-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.95rem 1.1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elev);
+    transition: border-color 0.25s, transform 0.25s var(--ease), background 0.25s;
+  }
+  .evidence-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+  .evidence-card .en {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--accent);
+    min-width: 2rem;
+  }
+  .evidence-card .et {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 1040px;
+  }
+  .evidence-card .et strong {
+    font-size: 0.94rem;
+    font-weight: 600;
+  }
+  .evidence-card .et em {
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .evidence-card .arrow {
+    margin-left: auto;
+    color: var(--border-strong);
+    transition: transform 0.25s var(--ease), color 0.25s;
+  }
+  .evidence-card:hover .arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  /* ---------- 动效（只动 transform，不动 opacity，保证任何情况下内容可见） ---------- */
+  @keyframes rise {
+    from { transform: translateY(10px); }
+    to { transform: none; }
+  }
+  @keyframes grow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  .dossier-hero {
+    animation: rise 0.55s var(--ease) both;
+  }
+  .results {
+    animation: rise 0.55s var(--ease) 0.08s both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dossier-hero,
+    .results,
+    .metric .num::after {
+      animation: none !important;
+    }
+  }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 720px) {
+    .results {
+      grid-template-columns: 1fr;
+    }
+    .device iframe {
+      min-width: 900px;
+      height: 560px;
+    }
+    .dossier-hero {
+      padding-top: 1.2rem;
+    }
+  }
+</style>
