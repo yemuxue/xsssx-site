@@ -1,12 +1,14 @@
 # Cloudflare Worker 静态资源配置
-# 这个项目是 Worker（不是 Pages），`wrangler deploy` 靠这段知道
-# 把构建产物 dist/ 当作静态资源上传。
 name = "xsssx-site"
 compatibility_date = "2026-11-01"
 
+# 自定义域名：deploy 时自动建 DNS 记录并签发证书
+routes = [
+  { pattern = "xsssxspace.com", custom_domain = true },
+  { pattern = "www.xsssxspace.com", custom_domain = true }
+]
+
 [assets]
 directory = "./dist"
-# 子目录 `/notes/` 自动映射到 notes/index.html
 html_handling = "auto-trailing-slash"
-# 资源不存在时返回 dist/404.html
 not_found_handling = "404-page"
