@@ -98,7 +98,12 @@ pnpm build
 npx wrangler pages deploy dist --project-name=你的项目名
 ```
 
-`wrangler.toml` 里的 `name` 要和项目名一致。
+`--project-name` 要和你创建的 Pages 项目名一致。
+
+> ⚠️ **用 Git 集成部署时，仓库里不要放 `wrangler.toml`。**
+> Cloudflare 看到它会把这个项目当成 Workers，构建完执行 `wrangler deploy`，
+> 报 `Missing entry-point to Worker script or to assets directory`。
+> Pages 项目只认 `wrangler pages deploy`。
 
 ---
 
