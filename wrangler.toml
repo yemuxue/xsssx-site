@@ -8,5 +8,5 @@ compatibility_date = "2026-11-01"
 directory = "./dist"
 # 子目录 `/notes/` 自动映射到 notes/index.html
 html_handling = "auto-trailing-slash"
-# 先关掉自定义 404 回退：它会触发 1042（Worker 回源到自己）
-not_found_handling = "none"
+# 资源不存在时返回 dist/404.html
+not_found_handling = "404-page"
