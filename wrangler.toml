@@ -1,0 +1,12 @@
+# Cloudflare Worker 静态资源配置
+# 这个项目是 Worker（不是 Pages），`wrangler deploy` 靠这段知道
+# 把构建产物 dist/ 当作静态资源上传。
+name = "xsssx-site"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./dist"
+# 子目录 `/notes/` 自动映射到 notes/index.html
+html_handling = "auto-trailing-slash"
+# 先关掉自定义 404 回退：它会触发 1042（Worker 回源到自己）
+not_found_handling = "none"
