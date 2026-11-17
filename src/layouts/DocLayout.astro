@@ -1,0 +1,128 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+const fm = Astro.props.frontmatter ?? {};
+const title = fm.title ?? '文档';
+const eyebrow = fm.eyebrow ?? '';
+const lede = fm.lede ?? '';
+const meta = fm.meta ?? [];
+---
+
+<BaseLayout title={title} description={lede} type="article">
+  <main class="wrap">
+    <nav class="crumb"><a href="/works/code-review-agent/">← 返回作品</a></nav>
+
+    <header class="hero">
+      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+      <h1>{title}</h1>
+      {lede && <p class="lede">{lede}</p>}
+      {meta.length > 0 && (
+        <dl class="meta">
+          {meta.map((m) => (
+            <div>
+              <dt>{m.k}</dt>
+              <dd>{m.v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </header>
+
+    <div class="layout">
+      <aside class="toc">
+        <p class="toc-title">目录</p>
+        <ol id="tocList"></ol>
+      </aside>
+      <article class="doc" id="doc">
+        <slot />
+      </article>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  const doc = document.getElementById('doc');
+  const list = document.getElementById('tocList');
+  if (doc && list) {
+    const heads = Array.from(doc.querySelectorAll('h2'));
+    list.innerHTML = heads
+      .map((h, i) => {
+        if (!h.id) h.id = `sec-${i}`;
+        return `<li><a href="#${h.id}">${h.textContent}</a></li>`;
+      })
+      .join('');
+  }
+</script>
+
+<style>
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 24px 24px 96px; }
+  .crumb { margin-bottom: 28px; font-size: 0.86rem; }
+  .crumb a { color: var(--muted); text-decoration: none; }
+  .crumb a:hover { color: var(--accent); }
+
+  .hero { max-width: 46rem; margin-bottom: 48px; }
+  .eyebrow {
+    margin: 0 0 12px; font-family: var(--font-mono); font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  }
+  .hero h1 {
+    margin: 0 0 14px; font-family: var(--font-serif); font-weight: 600;
+    font-size: clamp(2rem, 4vw, 2.9rem); line-height: 1.15; color: var(--text);
+  }
+  .lede { margin: 0 0 26px; font-size: 1.05rem; line-height: 1.75; color: var(--text-soft); }
+  .meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1px; margin: 0; background: var(--border); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .meta div { background: var(--bg-elev); padding: 14px 16px; }
+  .meta dt { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+  .meta dd { margin: 0; font-size: 0.88rem; color: var(--text); }
+
+  .layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 3.5rem; align-items: start; }
+  .toc { position: sticky; top: 88px; font-size: 0.84rem; }
+  .toc-title { margin: 0 0 10px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .toc a { color: var(--text-soft); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid transparent; }
+  .toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+
+  .doc { max-width: 46rem; }
+  .doc :global(h2) {
+    margin: 48px 0 16px; font-family: var(--font-serif); font-weight: 600;
+    font-size: 1.5rem; color: var(--text); padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    scroll-margin-top: 88px;
+  }
+  .doc :global(h2:first-child) { margin-top: 0; }
+  .doc :global(p) { margin: 0 0 14px; line-height: 1.85; color: var(--text-soft); }
+  .doc :global(ul) { margin: 0 0 16px; padding-left: 1.2rem; line-height: 1.85; color: var(--text-soft); }
+  .doc :global(li) { margin-bottom: 6px; }
+  .doc :global(strong) { color: var(--text); font-weight: 600; }
+  .doc :global(blockquote) {
+    margin: 0 0 22px; padding: 12px 16px; border-left: 3px solid var(--accent);
+    background: var(--bg-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--text-soft); font-size: 0.95rem;
+  }
+  .doc :global(blockquote p) { margin: 0 0 6px; }
+  .doc :global(blockquote ul) { margin: 0; }
+
+  .doc :global(table) { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 0.88rem; }
+  .doc :global(th), .doc :global(td) { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+  .doc :global(th) { background: var(--bg-soft); font-weight: 600; color: var(--text); }
+  .doc :global(tbody tr:nth-child(even) td) { background: #fcfbf8; }
+
+  .doc :global(img) {
+    width: 100%; height: auto; display: block; margin: 20px 0 8px;
+    border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+  }
+  .doc :global(p > em:only-child) {
+    display: block; margin: 0 0 28px; font-size: 0.78rem; font-style: normal;
+    color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 12px; }
+    .toc { position: static; order: -1; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--bg-elev); }
+    .toc ol { flex-direction: row; flex-wrap: wrap; gap: 8px 14px; }
+    .toc a { padding: 0; border: 0; }
+  }
+</style>
