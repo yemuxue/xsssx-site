@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /**
- * 构建前拉取 PRD 最新版：从 code-review-agent 仓库读取 Markdown，
- * 生成 src/pages/docs/code-review-agent/prd.md。
+ * 从 code-review-agent 仓库同步文档内容到站点。
  *
- * - 本地 `pnpm build` 会先跑（prebuild）
- * - Cloudflare 构建同样会先跑（build command 里包含 pnpm build）
- * - 拉取失败时保留现有文件，不让构建挂掉
+ * 只由 .github/workflows/sync-prd.yml 调用（不挂 prebuild），
+ * 避免构建时二次拉取把刚提交的内容覆盖回旧版。
+ *
+ * 同步内容：
+ *   - PRD.md            → src/pages/docs/code-review-agent/prd.md
+ *   - 13 张图册 PNG      → public/docs/code-review-agent/figures/
+ *   - 可用性报告 HTML    → public/docs/code-review-agent/usability.html
+ *   - 9 张报告截图       → public/docs/code-review-agent/shots/
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -13,119 +17,27 @@ import path from 'node:path';
 
 const REPO = process.env.PRD_REPO ?? 'yemuxue/code-review-agent';
 const BRANCH = process.env.PRD_BRANCH ?? 'main';
-const SRC = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encodeURIComponent(
-  '可信代码审查Agent/01_正式文档/可信代码审查Agent-PRD.md',
-)}`;
-const OUT = path.resolve('src/pages/docs/code-review-agent/prd.md');
-const FIG_DIR = path.resolve('public/docs/code-review-agent/figures');
+const TOKEN = process.env.GITHUB_TOKEN;
 
-// 图册：编号 → 仓库内的 PNG 文件名（02_核心图_PNG/）
+const DIR = '可信代码审查Agent';
+const OUT = path.resolve('src/pages/docs/code-review-agent/prd.md');
+const DOCS = path.resolve('public/docs/code-review-agent');
+const FIG_DIR = path.join(DOCS, 'figures');
+const SHOT_DIR = path.join(DOCS, 'shots');
+
 const FIGURES = [
-  '01_F01_系统上下文.png',
-  '02_F02_业务能力地图.png',
-  '03_F03_角色与权限矩阵.png',
-  '04_U01_代码作者用例.png',
-  '05_U02_Reviewer用例.png',
-  '06_U03_平台管理员用例.png',
-  '07_D01_主流程泳道图.png',
-  '08_D02_任务状态机.png',
-  '09_D03_页面流程图.png',
-  '10_D04_一次审查时序图.png',
-  '11_C01_三场景覆盖矩阵.png',
-  '12_C02_放行判定流程.png',
+  '01_F01_系统上下文.png', '02_F02_业务能力地图.png', '03_F03_角色与权限矩阵.png',
+  '04_U01_代码作者用例.png', '05_U02_Reviewer用例.png', '06_U03_平台管理员用例.png',
+  '07_D01_主流程泳道图.png', '08_D02_任务状态机.png', '09_D03_页面流程图.png',
+  '10_D04_一次审查时序图.png', '11_C01_三场景覆盖矩阵.png', '12_C02_放行判定流程.png',
   '13_P01_部署与数据流.png',
 ];
 
-const RAW = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encodeURIComponent(
-  '可信代码审查Agent/02_核心图_PNG',
-)}`;
-
-const SITE_DOCS = path.resolve('public/docs/code-review-agent');
-const USABILITY_SRC = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encodeURIComponent(
-  '可信代码审查Agent/01_正式文档/可信代码审查Agent-可用性测试报告.html',
-)}`;
-
-// 可用性报告引用的截图（仓库 00_界面截图/）
 const SHOTS = [
   '01-任务列表.png', '02-发现列表.png', '03-高风险证据.png',
   '04-反馈忽略.png', '05-补丁预览.png', '06-验证结果.png',
   '07-质量报告.png', '08-模拟用户测试面板.png', '09-移动端任务列表.png',
 ];
-
-async function get(url) {
-  const res = await fetch(url, { headers: { 'user-agent': 'xsssx-site-build' } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-async function withRetry(fn, label) {
-  let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      await new Promise((r) => setTimeout(r, 600 * attempt));
-    }
-  }
-  console.warn(`[prd] ${label} 同步失败：${lastErr.message}`);
-  return null;
-}
-
-async function syncUsability() {
-  const dir = path.join(SITE_DOCS, 'shots');
-  await mkdir(dir, { recursive: true });
-
-  let shots = 0;
-  for (const name of SHOTS) {
-    const buf = await withRetry(
-      () => get(`${RAW}/${encodeURIComponent('00_界面截图')}/${encodeURIComponent(name)}`),
-      `截图 ${name}`,
-    );
-    if (buf) {
-      await writeFile(path.join(dir, name), buf);
-      shots += 1;
-    }
-  }
-
-  const html = await withRetry(() => get(USABILITY_SRC), '可用性报告');
-  if (html) {
-    const text = html
-      .toString('utf8')
-      .replaceAll('../02_核心图_PNG/00_界面截图/', 'shots/')
-      .replaceAll('../原型截图/', 'shots/');
-    await writeFile(path.join(SITE_DOCS, 'usability.html'), text, 'utf8');
-  }
-  console.log(`[prd] 可用性报告 ${html ? '已同步' : '沿用本地'}，截图 ${shots}/${SHOTS.length}`);
-}
-
-async function syncFigures() {
-  await mkdir(FIG_DIR, { recursive: true });
-  let ok = 0;
-  for (const name of FIGURES) {
-    let lastErr;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        const res = await fetch(`${RAW}/${encodeURIComponent(name)}`, {
-          headers: { 'user-agent': 'xsssx-site-build' },
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        await writeFile(path.join(FIG_DIR, name), Buffer.from(await res.arrayBuffer()));
-        lastErr = null;
-        break;
-      } catch (err) {
-        lastErr = err;
-        await new Promise((r) => setTimeout(r, 600 * attempt));
-      }
-    }
-    if (lastErr) {
-      console.warn(`[prd] 图 ${name} 拉取失败：${lastErr.message}`);
-    } else {
-      ok += 1;
-    }
-  }
-  console.log(`[prd] 图册 ${ok}/${FIGURES.length} 张已同步`);
-}
 
 const FRONTMATTER = `---
 layout: ../../../layouts/DocLayout.astro
@@ -140,6 +52,37 @@ meta:
 
 `;
 
+/** raw 有 CDN 缓存，加时间戳强制取最新 */
+function rawUrl(relPath) {
+  const encoded = relPath.split('/').map(encodeURIComponent).join('/');
+  return `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encoded}?t=${Date.now()}`;
+}
+
+async function fetchBuffer(relPath) {
+  const res = await fetch(rawUrl(relPath), {
+    headers: {
+      'user-agent': 'xsssx-site-sync',
+      ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function withRetry(label, fn) {
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 700 * attempt));
+    }
+  }
+  console.warn(`[sync] ${label} 失败：${lastErr.message}`);
+  return null;
+}
+
 function stripIntro(text) {
   return text
     .replace(/^# .*\n/, '')
@@ -148,21 +91,54 @@ function stripIntro(text) {
     .replace(/^\s+/, '');
 }
 
-try {
-  const res = await fetch(SRC, { headers: { 'user-agent': 'xsssx-site-build' } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const body = stripIntro(await res.text());
-  if (!body.includes('## ')) throw new Error('内容异常：缺少章节');
-  await writeFile(OUT, FRONTMATTER + body, 'utf8');
-  console.log(`[prd] 已从 ${REPO}@${BRANCH} 同步`);
-} catch (err) {
-  if (existsSync(OUT)) {
-    console.warn(`[prd] 拉取失败（${err.message}），沿用已有文件`);
-  } else {
-    console.error(`[prd] 拉取失败且无本地副本：${err.message}`);
+async function syncPrd() {
+  const buf = await withRetry('PRD.md', () =>
+    fetchBuffer(`${DIR}/01_正式文档/可信代码审查Agent-PRD.md`),
+  );
+  if (!buf) {
+    if (!existsSync(OUT)) throw new Error('PRD 拉取失败且无本地副本');
+    console.warn('[sync] 沿用已有 prd.md');
+    return;
   }
+  const body = stripIntro(buf.toString('utf8'));
+  if (!body.includes('## ')) throw new Error('PRD 内容异常：缺少章节');
+  await writeFile(OUT, FRONTMATTER + body, 'utf8');
+  console.log('[sync] PRD 已更新');
 }
 
-// 图册与可用性报告独立同步：PRD 拉取失败不影响它们
-await syncFigures();
+async function syncDir(label, files, repoDir, outDir) {
+  await mkdir(outDir, { recursive: true });
+  let ok = 0;
+  for (const name of files) {
+    const buf = await withRetry(`${label} ${name}`, () =>
+      fetchBuffer(`${DIR}/02_核心图_PNG/${repoDir}${name}`),
+    );
+    if (buf) {
+      await writeFile(path.join(outDir, name), buf);
+      ok += 1;
+    }
+  }
+  console.log(`[sync] ${label} ${ok}/${files.length}`);
+}
+
+async function syncUsability() {
+  const buf = await withRetry('可用性报告', () =>
+    fetchBuffer(`${DIR}/01_正式文档/可信代码审查Agent-可用性测试报告.html`),
+  );
+  if (!buf) {
+    console.warn('[sync] 可用性报告沿用本地副本');
+    return;
+  }
+  const html = buf
+    .toString('utf8')
+    .replaceAll('../02_核心图_PNG/00_界面截图/', 'shots/')
+    .replaceAll('../原型截图/', 'shots/');
+  await mkdir(DOCS, { recursive: true });
+  await writeFile(path.join(DOCS, 'usability.html'), html, 'utf8');
+  console.log('[sync] 可用性报告已更新');
+}
+
+await syncPrd();
+await syncDir('图册', FIGURES, '', FIG_DIR);
+await syncDir('截图', SHOTS, '00_界面截图/', SHOT_DIR);
 await syncUsability();

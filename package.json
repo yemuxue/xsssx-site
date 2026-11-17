@@ -7,8 +7,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
-    "prebuild": "node scripts/fetch-prd.mjs"
+    "preview": "astro preview"
   },
   "dependencies": {
     "astro": "7.4.11"
