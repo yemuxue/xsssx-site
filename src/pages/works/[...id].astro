@@ -28,20 +28,12 @@ const Dossier = dossierMap[entry.id];
 {
   Dossier ? (
     <BaseLayout title={title} description={description} type="article">
-      <div class="container" style="padding-top:1.4rem">
-        <a class="back-link" href="/works/">
-          <span aria-hidden="true">←</span> 返回作品
-        </a>
-      </div>
       <Dossier />
     </BaseLayout>
   ) : (
     <BaseLayout title={title} description={description} type="article">
       <div class="page-head">
         <div class="container">
-          <a class="back-link" href="/works/">
-            <span aria-hidden="true">←</span> 返回作品
-          </a>
           <h1 class="page-title">{title}</h1>
           {description && <p class="page-desc">{description}</p>}
           <div class="meta-bar">

@@ -10,8 +10,6 @@ const meta = fm.meta ?? [];
 
 <BaseLayout title={title} description={lede} type="article">
   <main class="wrap">
-    <nav class="crumb"><a href="/works/code-review-agent/">← 返回作品</a></nav>
-
     <header class="doc-hero">
       {eyebrow && <p class="eyebrow">{eyebrow}</p>}
       <h1>{title}</h1>
@@ -56,10 +54,6 @@ const meta = fm.meta ?? [];
 
 <style>
   .wrap { max-width: var(--maxw); margin: 0 auto; padding: 24px 24px 96px; }
-  .crumb { margin-bottom: 28px; font-size: 0.86rem; }
-  .crumb a { color: var(--muted); text-decoration: none; }
-  .crumb a:hover { color: var(--accent); }
-
   .doc-hero { max-width: 46rem; margin-bottom: 48px; }
   .eyebrow {
     margin: 0 0 12px; font-family: var(--font-mono); font-size: 0.72rem;

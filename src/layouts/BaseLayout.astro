@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import BackNav from '../components/BackNav.astro';
 import { SITE } from '../consts';
 
 interface Props {
@@ -77,6 +78,7 @@ const person = {
     <a class="skip-link" href="#main">跳到正文</a>
     <Header />
     <main id="main">
+      {Astro.url.pathname !== '/' && <BackNav />}
       <slot />
     </main>
     <Footer />

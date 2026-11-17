@@ -1,0 +1,52 @@
+---
+/**
+ * 返回上一页。
+ * 优先走浏览器历史；没有历史（直接打开、外链进入）时退回 fallback。
+ */
+interface Props {
+  fallback?: string;
+  label?: string;
+}
+
+const { label = '返回上一页' } = Astro.props;
+
+// 没有历史（直接打开 / 外链进入）时，按栏目回退，而不是一律回首页
+const path = Astro.url.pathname;
+const sectionFallback = path.startsWith('/notes/')
+  ? '/notes/'
+  : path.startsWith('/works/')
+    ? '/works/'
+    : path.startsWith('/docs/code-review-agent/')
+      ? '/works/code-review-agent/'
+      : '/';
+const fallback = Astro.props.fallback ?? sectionFallback;
+---
+
+<nav class="back-nav container" aria-label="返回">
+  <a class="back-link" href={fallback} data-back>
+    <span aria-hidden="true">←</span> {label}
+  </a>
+</nav>
+
+<script>
+  document.addEventListener('click', (event) => {
+    const link = (event.target as HTMLElement).closest?.('a[data-back]');
+    if (!link) return;
+
+    const referrer = document.referrer ? new URL(document.referrer) : null;
+    const fromSameSite = referrer?.origin === location.origin;
+
+    if (fromSameSite && history.length > 1) {
+      event.preventDefault();
+      history.back();
+    }
+    // 否则按 href 走：直接打开或从外链进来时回到 fallback
+  });
+</script>
+
+<style>
+  .back-nav {
+    padding-top: 1.25rem;
+    padding-bottom: 0.25rem;
+  }
+</style>
