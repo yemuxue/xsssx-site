@@ -1,244 +1,1703 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>可信代码审查 Agent 原型</title>
-  <link rel="icon" href="data:,">
-  
-  <link rel="stylesheet" href="fa/all.min.css">
-  <style>
-    :root { --ink:#172033; --muted:#6f7b8d; --line:#e6eaf0; --panel:#ffffff; --canvas:#f5f7fb; --nav:#111a2e; --accent:#2e6bff; --teal:#008f83; --amber:#c77b08; --red:#c94d5d; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--canvas); color:var(--ink); font-family:Inter, "Microsoft YaHei", "PingFang SC", sans-serif; }
-    button, select { font:inherit; }
-    button { cursor:pointer; }
-    .app { min-height:100vh; display:flex; }
-    .sidebar { width:242px; background:var(--nav); color:#d9e1f3; padding:22px 14px; display:flex; flex-direction:column; gap:25px; }
-    .brand { display:flex; gap:11px; align-items:center; padding:0 10px; }
-    .brand-mark { width:32px; height:32px; background:#eaf1ff; color:#1c57da; border-radius:9px; display:grid; place-items:center; font-weight:800; }
-    .brand-title { font-size:15px; font-weight:800; letter-spacing:.1px; color:#fff; }
-    .brand-sub { font-size:11px; color:#95a8ca; margin-top:2px; }
-    .nav-title { font-size:11px; color:#7182a5; padding:0 10px; text-transform:uppercase; letter-spacing:.08em; }
-    .nav { display:flex; flex-direction:column; gap:5px; }
-    .nav button { border:0; background:transparent; color:#b7c4dc; width:100%; padding:11px 12px; border-radius:9px; display:flex; align-items:center; gap:10px; text-align:left; font-size:13px; }
-    .nav button:hover, .nav button.active { background:#263653; color:#fff; }
-    .nav button i { width:17px; text-align:center; color:#8fa3c7; }
-    .nav button.active i { color:#8fb4ff; }
-    .sidebar-bottom { margin-top:auto; border-top:1px solid #293753; padding:16px 10px 0; font-size:11px; color:#8fa0bc; line-height:1.6; }
-    .main { flex:1; min-width:0; }
-    .topbar { height:70px; background:#fff; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding:0 31px; }
-    .crumb { color:var(--muted); font-size:12px; display:flex; align-items:center; gap:8px; }
-    .crumb strong { color:var(--ink); }
-    .top-actions { display:flex; align-items:center; gap:12px; }
-    .role-select { border:1px solid var(--line); border-radius:7px; padding:8px 10px; color:#344054; background:#fff; font-size:12px; }
-    .avatar { width:32px; height:32px; border-radius:50%; background:#dbe7ff; color:#1e56ca; display:grid; place-items:center; font-size:12px; font-weight:700; }
-    .content { padding:28px 31px 42px; max-width:1440px; margin:auto; }
-    .page-head { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:24px; }
-    .eyebrow { color:var(--accent); font-size:12px; font-weight:700; letter-spacing:.03em; margin-bottom:8px; }
-    h1 { font-size:26px; line-height:1.2; margin:0; letter-spacing:-.02em; }
-    h2 { font-size:17px; margin:0; }
-    .subtitle { color:var(--muted); font-size:13px; margin-top:8px; }
-    .btn { border:1px solid var(--line); background:#fff; color:#334155; border-radius:7px; padding:9px 13px; font-size:12px; display:inline-flex; align-items:center; gap:7px; }
-    .btn:hover { border-color:#b8c6dd; background:#f9fbff; }
-    .btn-primary { color:#fff; background:var(--accent); border-color:var(--accent); }
-    .btn-primary:hover { background:#245be0; }
-    .btn-danger { color:#9f3041; border-color:#f2c9d0; background:#fff7f8; }
-    .btn-quiet { border-color:transparent; background:transparent; }
-    .metrics { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:13px; margin-bottom:22px; }
-    .metric, .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:0 2px 7px rgba(22,34,58,.025); }
-    .metric { padding:15px 17px; }
-    .metric-label { color:var(--muted); font-size:11px; }
-    .metric-value { font-size:23px; font-weight:750; margin-top:6px; letter-spacing:-.02em; }
-    .metric-meta { margin-top:7px; font-size:11px; color:var(--teal); }
-    .metric-meta.warn { color:var(--amber); }
-    .workspace-grid { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(360px,.8fr); gap:16px; align-items:start; }
-    .card-head { padding:17px 18px 13px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }
-    .card-title { font-size:14px; font-weight:750; }
-    .card-note { color:var(--muted); font-size:11px; }
-    .filters { display:flex; gap:8px; align-items:center; padding:13px 17px; border-bottom:1px solid var(--line); }
-    .filters select, .search { border:1px solid var(--line); border-radius:6px; background:#fff; padding:8px 9px; font-size:12px; color:#4a5568; }
-    .search { flex:1; }
-    .table-wrap { overflow:auto; }
-    table { border-collapse:collapse; width:100%; }
-    th { color:#8a95a6; font-size:11px; font-weight:600; text-align:left; background:#fafbfc; }
-    td { font-size:12px; border-top:1px solid #edf0f4; padding:14px 17px; vertical-align:top; }
-    th { padding:10px 17px; }
-    tr.task-row { cursor:pointer; }
-    tr.task-row:hover { background:#f7faff; }
-    .repo { font-weight:700; color:#243148; }
-    .pr { color:var(--muted); margin-top:5px; font-size:11px; }
-    .status { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 8px; font-size:10px; font-weight:700; white-space:nowrap; }
-    .status.done { color:#14796d; background:#e9faf6; }
-    .status.running { color:#92610f; background:#fff5df; }
-    .status.fail { color:#ad3549; background:#fff0f2; }
-    .status.pending { color:#536173; background:#eff2f6; }
-    .right-card { min-height:240px; }
-    .risk-list { padding:10px 17px 14px; }
-    .risk-item { display:flex; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid #edf0f4; }
-    .risk-item:last-child { border-bottom:0; }
-    .risk-name { font-size:12px; font-weight:650; }
-    .risk-meta { color:var(--muted); font-size:11px; margin-top:4px; }
-    .severity { font-size:10px; font-weight:750; border-radius:5px; padding:4px 7px; height:max-content; }
-    .severity.high { color:#ab3045; background:#fff0f2; }
-    .severity.medium { color:#9b680c; background:#fff7e4; }
-    .severity.low { color:#4470aa; background:#edf4ff; }
-    .progress { height:7px; background:#ecf0f5; border-radius:20px; overflow:hidden; }
-    .progress > span { display:block; height:100%; background:var(--accent); border-radius:20px; }
-    .mini-progress { padding:17px; }
-    .mini-progress-row { display:flex; justify-content:space-between; font-size:11px; margin:12px 0 7px; }
-    .mini-progress-row span:last-child { color:#334155; font-weight:700; }
-    .review-layout { display:grid; grid-template-columns:minmax(0,1fr) 350px; gap:16px; align-items:start; }
-    .review-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding-bottom:18px; border-bottom:1px solid var(--line); margin-bottom:18px; }
-    .review-title { font-size:20px; font-weight:800; }
-    .review-meta { color:var(--muted); font-size:12px; margin-top:7px; }
-    .review-actions { display:flex; gap:8px; }
-    .tabs { display:flex; gap:24px; border-bottom:1px solid var(--line); margin-bottom:14px; }
-    .tab { padding:10px 0; font-size:12px; color:var(--muted); border:0; background:none; position:relative; }
-    .tab.active { color:var(--accent); font-weight:700; }
-    .tab.active:after { content:""; height:2px; background:var(--accent); position:absolute; bottom:-1px; left:0; right:0; }
-    .finding { padding:16px 18px; border-bottom:1px solid var(--line); display:flex; gap:12px; cursor:pointer; }
-    .finding:hover, .finding.selected { background:#f8fbff; }
-    .finding:last-child { border-bottom:0; }
-    .finding-main { flex:1; min-width:0; }
-    .finding-title { font-weight:750; font-size:13px; }
-    .finding-desc { color:#566274; font-size:12px; line-height:1.6; margin-top:7px; }
-    .finding-location { color:#1f5ece; font-size:11px; margin-top:8px; }
-    .finding-status { color:#7b8798; font-size:10px; white-space:nowrap; }
-    .evidence { padding:18px; }
-    .evidence-label { color:#7e899a; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-    .evidence h3 { font-size:15px; margin:7px 0 8px; }
-    .evidence p { color:#596577; font-size:12px; line-height:1.65; margin:0 0 14px; }
-    .code { background:#101827; color:#d6e2f5; border-radius:8px; padding:14px; font-family:Consolas, monospace; font-size:11px; line-height:1.65; white-space:pre-wrap; }
-    .code .line { display:block; }
-    .code .hot { background:#4b2632; margin:0 -14px; padding:0 14px; display:block; }
-    .evidence-actions { display:flex; gap:8px; margin-top:16px; }
-    .drawer { position:fixed; top:0; right:-450px; height:100vh; width:430px; background:#fff; border-left:1px solid var(--line); box-shadow:-15px 0 40px rgba(30,42,66,.12); transition:right .22s ease; z-index:20; display:flex; flex-direction:column; }
-    .drawer.open { right:0; }
-    .drawer-head { padding:20px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:flex-start; }
-    .drawer-body { overflow:auto; padding:19px 20px 30px; }
-    .drawer-close { border:0; background:transparent; color:#7d8796; font-size:18px; }
-    .diff { margin:15px 0; background:#101827; border-radius:8px; padding:15px; color:#dce7f5; font-family:Consolas, monospace; font-size:11px; line-height:1.7; }
-    .diff .add { color:#95e6ae; background:#173a2a; display:block; }
-    .diff .del { color:#ff9f9f; background:#44232c; display:block; }
-    .check { display:flex; gap:8px; align-items:flex-start; color:#4d596b; font-size:12px; line-height:1.5; }
-    .check input { margin-top:2px; accent-color:var(--accent); }
-    .verify-grid { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; }
-    .verify-step { padding:16px 18px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:flex-start; }
-    .step-icon { width:25px; height:25px; border-radius:50%; display:grid; place-items:center; font-size:11px; background:#e9edf3; color:#6d7787; flex:0 0 auto; }
-    .step-icon.ok { color:#13786e; background:#e4f8f1; }
-    .step-icon.run { color:#9b680c; background:#fff2d4; }
-    .step-title { font-size:12px; font-weight:700; }
-    .step-sub { font-size:11px; color:var(--muted); margin-top:4px; }
-    .report-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:13px; margin-bottom:17px; }
-    .report-card { padding:16px; }
-    .chart { height:170px; display:flex; align-items:flex-end; gap:12px; padding:18px 20px 20px; }
-    .bar { flex:1; background:#bfd1ff; border-radius:4px 4px 0 0; position:relative; min-width:22px; }
-    .bar strong { position:absolute; top:-18px; width:100%; text-align:center; color:#47607e; font-size:10px; }
-    .bar small { position:absolute; bottom:-18px; width:100%; text-align:center; color:#8c96a5; font-size:10px; }
-    .feedback-overlay { position:fixed; inset:0; background:rgba(20,29,47,.35); z-index:30; display:none; }
-    .feedback-overlay.open { display:block; }
-    .feedback-panel { position:absolute; right:0; top:0; bottom:0; width:min(470px,100%); background:#fff; padding:24px; overflow:auto; }
-    .persona-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:15px 0 19px; }
-    .persona { border:1px solid var(--line); background:#fff; border-radius:8px; padding:11px 8px; text-align:center; color:#566274; font-size:11px; }
-    .persona.active { border-color:#8db0ff; background:#eff4ff; color:#2456c6; font-weight:700; }
-    .test-task { border:1px solid var(--line); border-radius:9px; padding:14px; margin:10px 0; }
-    .test-task.done { border-color:#b9e8db; background:#f2fcf8; }
-    .test-task-title { display:flex; gap:8px; font-weight:700; font-size:12px; }
-    .test-task small { display:block; color:var(--muted); line-height:1.5; margin:7px 0 0 22px; }
-    .feedback-note { background:#fff8e8; color:#7d5b15; border:1px solid #f5dfaa; border-radius:8px; padding:12px; font-size:11px; line-height:1.6; margin:14px 0; }
-    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(16px); opacity:0; pointer-events:none; background:#172033; color:#fff; border-radius:7px; padding:10px 15px; font-size:12px; z-index:50; transition:all .2s ease; }
-    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-    .empty { color:var(--muted); text-align:center; padding:35px 20px; font-size:12px; }
-    @media (max-width: 1000px) { .sidebar { width:202px; } .workspace-grid, .review-layout, .verify-grid { grid-template-columns:1fr; } .right-card { min-height:0; } }
-    @media (max-width: 720px) { .sidebar { display:none; } .topbar { padding:0 16px; } .content { padding:22px 16px 35px; } .metrics, .report-grid { grid-template-columns:repeat(2,1fr); } .page-head, .review-header { flex-direction:column; } .review-actions { width:100%; } .review-actions .btn { flex:1; justify-content:center; } .drawer { width:100%; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可信代码审查 Agent · 工作台 v2</title>
+<link rel="icon" href="data:,">
+<style>
+  :root{
+    --ink:#172033; --muted:#5a6678; --line:#e6eaf0; --panel:#fff; --canvas:#f5f7fb;
+    --nav:#111a2e; --accent:#2e6bff; --teal:#0f766e; --amber:#9a5b06; --red:#c94d5d;
+    --st-done:#14796d; --st-run:#2456c6; --st-block:#b4432c; --faint:#5f6b7c;
+    --done-bg:#ecf9f2; --done-fg:#14796d; --run-bg:#eff6ff; --run-fg:#2456c6;
+    --block-bg:#fff4f0; --block-fg:#b4432c; --todo-bg:#f4f6f9; --todo-fg:#6b7789;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px}
+  button,select,input{font:inherit}
+  button{cursor:pointer}
+  a{color:inherit;text-decoration:none}
+  .app{min-height:100vh;display:flex}
+
+  /* ---------- 侧栏 ---------- */
+  .sidebar{width:236px;flex:0 0 236px;background:var(--nav);color:#d9e1f3;padding:20px 12px 46px;display:flex;flex-direction:column;gap:22px}
+  .brand{display:flex;gap:10px;align-items:center;padding:0 8px}
+  .brand-mark{width:32px;height:32px;border-radius:9px;background:#eaf1ff;color:#1c57da;display:grid;place-items:center}
+  .brand-title{font-size:14px;font-weight:800;color:#fff}
+  .brand-sub{font-size:10px;color:#93a6c8;margin-top:2px}
+  .nav-title{font-size:10px;color:#6f81a4;letter-spacing:.08em;text-transform:uppercase;padding:0 10px;margin-bottom:6px}
+  .nav{display:flex;flex-direction:column;gap:3px}
+  .nav button{border:0;background:transparent;color:#b7c4dc;padding:9px 11px;border-radius:8px;display:flex;align-items:center;gap:9px;text-align:left;font-size:12.5px;width:100%}
+  .nav button:hover{background:#1c2a44;color:#fff}
+  .nav button.active{background:#263653;color:#fff;font-weight:600}
+  .nav button svg{opacity:.8;flex:0 0 auto}
+  .nav button .count{margin-left:auto;font-size:10px;background:#2d3d5c;color:#a9bada;border-radius:9px;padding:1px 6px}
+  .nav button.active .count{background:#3b527c;color:#dbe7ff}
+  .sidebar-bottom{margin-top:auto;border-top:1px solid #25334d;padding:14px 8px 0;font-size:10.5px;color:#8496b5;line-height:1.6}
+
+  /* ---------- 顶栏 ---------- */
+  .main{flex:1;min-width:0}
+  .topbar{height:62px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 26px}
+  .crumb{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}
+  .crumb b{color:var(--ink);font-weight:700}
+  .top-right{display:flex;align-items:center;gap:10px}
+  .role-select{border:1px solid var(--line);border-radius:7px;padding:7px 9px;font-size:11.5px;color:#344054;background:#fff}
+  .avatar{width:30px;height:30px;border-radius:50%;background:#dbe7ff;color:#1e56ca;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .content{padding:24px 26px 88px;max-width:1400px;margin:0 auto}
+
+  /* ---------- 通用 ---------- */
+  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+  .eyebrow{color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.04em;margin-bottom:7px}
+  h1{font-size:23px;margin:0;letter-spacing:-.02em}
+  h2{font-size:15px;margin:0}
+  .subtitle{color:var(--muted);font-size:12px;margin-top:7px;line-height:1.6}
+  .btn{border:1px solid var(--line);background:#fff;color:#334155;border-radius:7px;padding:8px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:#b8c6dd;background:#f9fbff}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-primary:hover{background:#245be0}
+  .btn-ok{background:#0d8f7f;border-color:#0d8f7f;color:#fff}
+  .btn-ok:hover{background:#0a7a6c}
+  .btn-danger{color:#a3382c;border-color:#f2c9d0;background:#fff7f8}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn-sm{padding:5px 9px;font-size:11px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 7px rgba(22,34,58,.025);overflow:hidden}
+  .table-wrap{overflow-x:auto;overscroll-behavior-x:contain}
+  .card-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .card-t{font-size:13px;font-weight:700}
+  .card-note{color:var(--muted);font-size:11px}
+  .card-b{padding:14px 16px}
+  .grid-2{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.85fr);gap:14px;align-items:start}
+  .stack{display:grid;gap:14px}
+  .muted{color:var(--muted)}
+  .mono{font-family:Consolas,Menlo,monospace}
+
+  /* ---------- 指标 ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+  .kpi{padding:14px 16px}
+  .kpi-l{color:var(--muted);font-size:11px}
+  .kpi-v{font-size:22px;font-weight:750;margin-top:5px;letter-spacing:-.02em}
+  .kpi-m{margin-top:6px;font-size:11px;color:var(--teal)}
+  .kpi-m.warn{color:var(--amber)}
+
+  /* ---------- 表格 ---------- */
+  .tbl{width:100%;min-width:820px;border-collapse:collapse}
+  .tbl th{text-align:left;font-size:10.5px;color:var(--faint);font-weight:600;background:#fafbfc;padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .tbl td{padding:12px 14px;border-top:1px solid #eef1f5;vertical-align:middle;font-size:12px}
+  .tbl th:last-child,.tbl td:last-child{text-align:right;white-space:nowrap;width:1%}
+  .tbl .btn{white-space:nowrap}
+  .tbl tr.row{cursor:pointer}
+  .tbl tr.row:hover{background:#eef4ff}
+  .repo{font-weight:700;color:#243148}
+  .sub{color:var(--muted);font-size:11px;margin-top:3px}
+
+  /* ---------- 徽标 / 状态 ---------- */
+  .pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:700;white-space:nowrap}
+  .pill.done{color:var(--done-fg);background:var(--done-bg)}
+  .pill.running{color:var(--run-fg);background:var(--run-bg)}
+  .pill.blocked{color:var(--block-fg);background:var(--block-bg)}
+  .pill.todo{color:var(--todo-fg);background:var(--todo-bg)}
+  .sev{font-size:10px;font-weight:750;border-radius:5px;padding:3px 6px}
+  .sev.high{color:#ab3045;background:#fff0f2}
+  .sev.medium{color:#9b680c;background:#fff7e4}
+  .sev.low{color:#4470aa;background:#edf4ff}
+
+  /* ---------- 阶段进度条（列表） ---------- */
+  .stagebar{display:flex;gap:3px;align-items:center}
+  .stagebar i{display:block;width:16px;height:5px;border-radius:3px;background:#e3e8ef}
+  .stagebar i.done{background:#26a69a}
+  .stagebar i.running{background:var(--st-run)}
+  .stagebar i.blocked{background:var(--st-block)}
+  .stagebar-note{font-size:10.5px;color:var(--muted);margin-top:5px}
+
+  /* ---------- 阶段卡 ---------- */
+  .stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}
+  .stage{border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:#fff;cursor:pointer;position:relative;transition:border-color .15s,box-shadow .15s}
+  .stage:hover{border-color:#b9c6dd}
+  .stage.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(46,107,255,.12)}
+  .stage.todo{background:#fbfcfd}
+  .stage.blocked{background:#fffaf8;border-color:#f3d2c8}
+  .stage-h{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700}
+  .stage-dot{width:7px;height:7px;border-radius:50%;background:#c7cfdb}
+  .stage.done .stage-dot{background:#26a69a}
+  .stage.running .stage-dot{background:var(--st-run)}
+  .stage.blocked .stage-dot{background:var(--st-block)}
+  .stage-s{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.45;min-height:26px}
+  .stage-t{font-size:10px;color:var(--faint);margin-top:4px;font-family:Consolas,monospace;font-weight:500}
+  .stage.done{background:var(--done-bg);border-color:#cfeade}
+  .stage.running{background:var(--run-bg);border-color:#c9dcff}
+
+  /* ---------- 下一步提示 ---------- */
+  .nextstep{display:flex;align-items:center;gap:10px;border:1px dashed #c9d6ea;background:#f8fbff;border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:12px}
+  .nextstep b{color:#1e56ca}
+  .nextstep .btn{margin-left:auto}
+
+  /* ---------- 标签页 ---------- */
+  .tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .tab{border:0;background:none;padding:8px 0;font-size:12px;color:var(--muted);position:relative}
+  .tab.on{color:var(--accent);font-weight:700}
+  .tab.on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent)}
+
+  /* ---------- 发现 ---------- */
+  .finding{display:flex;gap:10px;padding:13px 15px;border-bottom:1px solid #eef1f5;cursor:pointer}
+  .finding:last-child{border-bottom:0}
+  .finding:hover{background:#f8fbff}
+  .finding-t{font-weight:700;font-size:12.5px}
+  .finding-d{color:#566274;font-size:11.5px;line-height:1.55;margin-top:5px}
+  .finding-l{color:#1f5ece;font-size:10.5px;margin-top:6px;font-family:Consolas,monospace}
+
+  /* ---------- 抽屉 ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(16,24,40,.28);z-index:55;opacity:0;pointer-events:none;transition:opacity .18s}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:#fff;border-left:1px solid var(--line);box-shadow:-14px 0 40px rgba(30,42,66,.12);transform:translateX(100%);transition:transform .2s ease;z-index:60;display:flex;flex-direction:column}
+  .drawer.on{transform:none}
+  .drawer-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .drawer-b{padding:16px 18px 40px;overflow:auto}
+  .close{border:0;background:none;font-size:18px;color:#7d8796;line-height:1;width:32px;height:32px;border-radius:6px;display:grid;place-items:center}
+  .close:hover{background:#f1f4f9;color:#334155}
+  :where(button,a,select,input,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .sidebar :focus-visible{outline-color:#8fb4ff}
+  .tbl tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:#f5f9ff}
+  .btn.btn-danger:hover{background:#fff0f2;border-color:#e9aab5;color:#a3382c}
+  .btn:disabled{opacity:1;background:#f2f4f7;border-color:#e4e7ec;color:#98a2b3}
+
+  /* ---------- 代码块 ---------- */
+  .code{background:#101827;color:#d6e2f5;border-radius:8px;padding:12px 14px;font-family:Consolas,monospace;font-size:11px;line-height:1.65;white-space:pre-wrap;overflow:auto}
+  .code .add{color:#8fe3a8;background:#16331f;display:block}
+  .code .del{color:#ff9f9f;background:#3d2029;display:block}
+  .code .ln{display:block}
+  .code .hot{background:#4b2632;margin:0 -14px;padding:0 14px}
+
+  /* ---------- 矩阵 ---------- */
+  .matrix{width:100%;border-collapse:collapse;font-size:12px}
+  .matrix th,.matrix td{border:1px solid var(--line);padding:9px 12px;text-align:left}
+  .matrix th{background:#fafbfc;font-size:11px;color:#7e899a;font-weight:600}
+  .yes{color:#0d8f7f;font-weight:700}
+  .no{color:#b9c1cd}
+
+  /* ---------- 其他 ---------- */
+  .empty{color:var(--muted);text-align:center;padding:34px 16px;font-size:12px}
+  .toast{position:fixed;left:50%;bottom:32px;transform:translate(-50%,14px);opacity:0;pointer-events:none;background:#172033;color:#fff;padding:9px 14px;border-radius:7px;font-size:12px;z-index:80;transition:.2s}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .split{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed #eef1f5;font-size:12px}
+  .kv:last-child{border-bottom:0}
+  .kv > span:first-child{color:var(--muted)}
+  .kv span:last-child{font-weight:600}
+  .tl{list-style:none;margin:0;padding:0}
+  .tl li{position:relative;padding:0 0 14px 18px;border-left:1px solid #e3e8ef;font-size:12px}
+  .tl li:last-child{border-left-color:transparent;padding-bottom:0}
+  .tl li:before{content:"";position:absolute;left:-4px;top:4px;width:7px;height:7px;border-radius:50%;background:#26a69a}
+  .tl small{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}
+  .warnbox{border:1px solid #f5dfaa;background:#fff8e8;color:#7d5b15;border-radius:8px;padding:10px 12px;font-size:11.5px;line-height:1.6}
+  .infobox{border:1px solid #d6e4ff;background:#f4f8ff;color:#2b4a86;border-radius:8px;padding:10px 12px;font-size:11.5px;line-height:1.6}
+  .rule{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #eef1f5}
+  .rule:last-child{border-bottom:0}
+  .rule-t{font-weight:650;font-size:12.5px}
+  .rule-d{color:var(--muted);font-size:11px;margin-top:3px;line-height:1.5}
+  .switch{position:relative;width:34px;height:19px;border-radius:99px;background:#d7dee9;border:0;flex:0 0 auto;transition:.15s}
+  .switch:after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on{background:#0d8f7f}
+  .switch.on:after{left:17px}
+
+  @media (max-width:1100px){
+    .stages{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid-2,.split{grid-template-columns:1fr}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:900px){
+    .sidebar{width:60px;flex:0 0 60px;padding:14px 6px;gap:14px;align-items:center}
+    .brand{justify-content:center;padding:0}
+    .brand>div,.nav-title,.sidebar-bottom,.nav button span,.nav button .count{display:none}
+    .nav{width:100%}
+    .nav button{justify-content:center;padding:10px 0}
+    .topbar{padding:0 12px;height:56px}
+    .crumb{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .top-user{display:none}
+    .role-select{max-width:108px;font-size:11px;padding:5px 6px}
+    #logoutBtn{padding:5px 8px}
+  }
+  @media (max-width:720px){
+    .content{padding:18px 14px 60px}
+    .stages{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .page-head{flex-direction:column}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .drawer{width:100vw}
+    .login-points{display:none}
+  }
+
+  /* ---------- 登录 ---------- */
+  .login-page{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(400px,.95fr);background:var(--canvas)}
+  .login-hero{position:relative;overflow:hidden;background:linear-gradient(145deg,#0d1b3a 0%,#16305e 55%,#1d4ed8 120%);color:#fff;padding:44px 56px;display:flex;flex-direction:column;justify-content:space-between}
+  .login-hero:before,.login-hero:after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.14);pointer-events:none}
+  .login-hero:before{width:520px;height:520px;right:-200px;top:-180px}
+  .login-hero:after{width:340px;height:340px;right:-70px;bottom:-170px;background:rgba(255,255,255,.05)}
+  .login-brand{display:flex;align-items:center;gap:11px;position:relative;z-index:1}
+  .login-brand .brand-mark{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.26);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px}
+  .login-brand b{display:block;font-size:14px;letter-spacing:.2px}
+  .login-brand span{display:block;font-size:10.5px;color:rgba(255,255,255,.6);margin-top:2px}
+  .login-copy{position:relative;z-index:1;max-width:520px;margin:40px 0}
+  .login-kicker{display:inline-block;font-size:10px;letter-spacing:.18em;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase}
+  .login-copy .login-kicker{color:#a8c4ff}
+  .login-copy h1{font-size:38px;line-height:1.25;font-weight:700;letter-spacing:-.02em;margin:14px 0 16px}
+  .login-copy p{font-size:13.5px;line-height:1.9;color:rgba(255,255,255,.76);max-width:430px}
+  .login-points{margin-top:34px;border-top:1px solid rgba(255,255,255,.14);max-width:460px}
+  .login-points>div{display:grid;grid-template-columns:30px 110px 1fr;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+  .login-points span{font-size:10px;color:#8fb4ff;font-family:Consolas,monospace}
+  .login-points b{font-size:12px;font-weight:600}
+  .login-points i{font-style:normal;font-size:11.5px;color:rgba(255,255,255,.58)}
+  .login-foot{position:relative;z-index:1;font-size:10.5px;color:rgba(255,255,255,.42);letter-spacing:.02em}
+  .login-panel{display:grid;place-items:center;padding:36px}
+  .login-card{width:100%;max-width:410px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 70px rgba(16,24,40,.1);padding:34px 34px 28px}
+  .login-head{margin-bottom:22px}
+  .login-head .login-kicker{color:var(--accent)}
+  .login-head h2{font-size:24px;margin:8px 0 5px;letter-spacing:-.02em}
+  .login-head p{font-size:12px;color:var(--muted)}
+  .login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+  .login-field label{font-size:11.5px;font-weight:600;color:#3d4a5c}
+  .login-field .input{height:42px;border:1px solid var(--line);border-radius:8px;background:#fbfcfe;padding:0 12px;font-size:12.5px;color:var(--ink)}
+  .login-field .input:focus{outline:none;background:#fff;border-color:var(--accent);box-shadow:0 0 0 3px rgba(46,107,255,.12)}
+  .login-error{min-height:16px;font-size:11.5px;color:var(--red);margin:2px 0 8px}
+  .login-submit{width:100%;height:42px;justify-content:center;font-size:13px}
+  .login-quick{margin-top:20px;border-top:1px solid var(--line);padding-top:14px;display:grid;gap:7px}
+  .login-quick-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+  .login-quick-h b{font-size:11.5px}
+  .login-quick-h span{font-size:10.5px;color:var(--muted)}
+  .quick{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 11px;text-align:left;display:flex;flex-direction:column;gap:2px;transition:border-color .15s,background .15s}
+  .quick:hover{border-color:var(--accent);background:#f7faff}
+  .quick b{font-size:12px;color:var(--ink)}
+  .quick span{font-size:10.5px;color:var(--muted)}
+  .top-user{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+  .top-user b{color:var(--ink);font-size:12px}
+  @media (max-width:900px){
+    .login-page{grid-template-columns:1fr}
+    .login-hero{padding:32px 26px}
+    .login-copy h1{font-size:30px}
+    .login-points{display:none}
+  }
+
+  /* 移动端覆盖：放在最后，避免被后定义的组件样式反向覆盖 */
+  @media (max-width:900px){
+    .topbar .top-user{display:none}
+    .topbar .role-select{max-width:104px;font-size:10.5px;padding:5px 6px}
+    .topbar #logoutBtn{padding:5px 8px;font-size:11px}
+    .login-hero:before,.login-hero:after{display:none}
+  }
+  @media (max-width:720px){
+    .tbl{min-width:640px}
+    .finding{padding:12px}
+    .stage{padding:9px}
+  }
+</style>
 </head>
 <body>
 <div style="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b45309;color:#fff;font:600 13px/30px -apple-system,Segoe UI,sans-serif;text-align:center;pointer-events:none;letter-spacing:.02em;">原型演示 · 页面内所有数字均为示意数据，非真实评测结果</div>
+<div id="loginRoot"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z"/></svg>
+      </div>
+      <div><div class="brand-title">可信代码审查</div><div class="brand-sub">Agent Workbench · v2</div></div>
+    </div>
 
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand"><div class="brand-mark"><i class="fa-solid fa-shield-halved"></i></div><div><div class="brand-title">可信代码审查</div><div class="brand-sub">Agent Workbench</div></div></div>
-      <div><div class="nav-title">工作台</div><nav class="nav" id="nav"><button data-view="tasks" class="active"><i class="fa-solid fa-inbox"></i>审查任务</button><button data-view="review"><i class="fa-solid fa-code-branch"></i>发现与证据</button><button data-view="report"><i class="fa-solid fa-chart-line"></i>质量报告</button><button data-view="settings"><i class="fa-solid fa-sliders"></i>策略设置</button></nav></div>
-      <div><div class="nav-title">验证</div><nav class="nav"><button id="openTest"><i class="fa-solid fa-user-check"></i>模拟用户测试</button></nav></div>
-      <div class="sidebar-bottom">本地自托管原型<br>数据为演示样例，操作结果仅保存在当前页面。</div>
-    </aside>
-    <main class="main">
-      <header class="topbar"><div class="crumb"><span>工作台</span><i class="fa-solid fa-chevron-right" style="font-size:9px"></i><strong id="crumbText">审查任务</strong></div><div class="top-actions"><select id="roleSelect" class="role-select" aria-label="模拟角色"><option value="reviewer">Reviewer / Tech Lead</option><option value="author">代码作者</option><option value="admin">平台管理员</option></select><div class="avatar" id="avatar">R</div></div></header>
-      <section class="content" id="content"></section>
-    </main>
+    <div>
+      <div class="nav-title">工作</div>
+      <nav class="nav" id="navMain"></nav>
+    </div>
+
+    <div>
+      <div class="nav-title">治理</div>
+      <nav class="nav" id="navGov"></nav>
+    </div>
+
+    <div class="sidebar-bottom">
+      本地自托管原型<br>
+      数据为演示样例，操作仅保存在当前页面。
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb" id="crumb"></div>
+      <div class="top-right">
+        <select class="role-select" id="roleSelect" aria-label="切换角色">
+          <option value="author">代码作者</option>
+          <option value="reviewer">Reviewer / Tech Lead</option>
+          <option value="admin">平台管理员</option>
+        </select>
+        <div class="top-user"><b id="topName">林晓</b><span id="topRole">代码作者</span></div>
+        <div class="avatar" id="avatar">作</div>
+        <button class="btn btn-sm" id="logoutBtn" title="退出登录">退出</button>
+      </div>
+    </header>
+    <section class="content" id="view"></section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="详情">
+  <div class="drawer-h">
+    <div><div class="eyebrow" id="drawerKicker">发现详情</div><h2 id="drawerTitle"></h2></div>
+    <button class="close" id="drawerClose" aria-label="关闭">×</button>
   </div>
+  <div class="drawer-b" id="drawerBody"></div>
+</aside>
 
-  <aside class="drawer" id="findingDrawer" aria-label="发现详情"><div class="drawer-head"><div><div class="evidence-label">F-1024 · 发现详情</div><h3 id="drawerTitle" style="margin:7px 0 0;font-size:16px"></h3></div><button class="drawer-close" id="drawerClose" aria-label="关闭"><i class="fa-solid fa-xmark"></i></button></div><div class="drawer-body" id="drawerBody"></div></aside>
+<div class="toast" id="toast"></div>
 
-  <div class="feedback-overlay" id="feedbackOverlay"><section class="feedback-panel"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">USABILITY TEST</div><h2>模拟用户测试</h2><p class="subtitle">用任务完成情况记录原型的可理解性和阻塞点。</p></div><button class="drawer-close" id="testClose"><i class="fa-solid fa-xmark"></i></button></div><div class="persona-grid" id="personaGrid"><button class="persona active" data-persona="reviewer">Reviewer<br><small>判断是否放行</small></button><button class="persona" data-persona="author">代码作者<br><small>处理发现</small></button><button class="persona" data-persona="admin">平台管理员<br><small>查看质量</small></button></div><div class="feedback-note" id="testBrief">任务：找到高风险问题，查看证据，判断是否需要修复，并完成一次审批验证。</div><div id="testTasks"></div><div style="display:flex;gap:8px;margin-top:18px"><button class="btn btn-primary" id="completeTest"><i class="fa-solid fa-flag-checkered"></i>完成本轮测试</button><button class="btn" id="resetTest">重置任务</button></div><div id="testResult" style="margin-top:16px"></div></section></div>
-  <div class="toast" id="toast"></div>
+<script>
+/* ==========================================================================
+   数据（示意）
+   ========================================================================== */
+const STAGES = [
+  { key:'intake',     label:'接入',  desc:'变更集与 diff' },
+  { key:'analyze',    label:'分析',  desc:'静态扫描 + 模型' },
+  { key:'findings',   label:'发现',  desc:'复核与确认' },
+  { key:'fix',        label:'修复',  desc:'补丁与 diff' },
+  { key:'verify',     label:'验证',  desc:'测试与回归' },
+  { key:'conclusion', label:'结论',  desc:'放行或阻断' },
+];
 
-  <script>
-    const state = { view:'tasks', role:'reviewer', selectedFinding:'high', findingState:{high:'待处理', medium:'待处理', low:'已忽略'}, approved:false, verified:false, testPersona:'reviewer', testDone:{}, events:[] };
-    const findings = {
-      high:{severity:'高风险', cls:'high', title:'鉴权中间件未覆盖管理端点', desc:'新增管理端点绕过了统一鉴权依赖，未登录请求可以访问仓库配置。建议复用现有 require_user 依赖并补充权限测试。', location:'src/api/server.py · L184-L192', evidence:'路由在 app.include_router(admin_router) 处挂载，但 router 内没有声明 dependencies=[Depends(require_user)]。对比 /analyze 端点可见鉴权依赖只在单个 handler 上声明。', code:'181  @admin_router.get("/repositories")\n182  async def list_repositories():\n183      return await repo_store.list_all()\n184  \n185  # 该端点当前未经过统一鉴权', impact:'未授权用户可读取仓库元数据，属于合并前需要优先处理的问题。'},
-      medium:{severity:'中风险', cls:'medium', title:'重试路径没有复用请求级超时', desc:'LLM 重试会重新创建客户端默认超时，可能让单次审查等待时间超过任务预算。建议沿用 request_timeout。', location:'src/llm/client.py · L72-L89', evidence:'retry() 中调用 create_client() 时没有传入 request_timeout；在网络波动下会出现长尾等待。', code:'72  for attempt in range(max_retries):\n73      client = create_client()\n74      response = await client.complete(prompt)', impact:'影响任务时延和成本，建议进入本次迭代但不阻塞合并。'},
-      low:{severity:'低风险', cls:'low', title:'审查报告缺少缓存命中提示', desc:'用户无法区分本次结果来自实时分析还是重复审查缓存，可能误判结果新鲜度。', location:'src/app/report.py · L42-L49', evidence:'报告只展示任务完成时间，没有展示 cache_hit 和 commit_sha。', code:'42  report = build_report(findings)\n43  return render_report(report)', impact:'影响可解释性和重复审查体验，可在后续体验优化中处理。'}
-    };
-    const taskData = [
-      {repo:'acme/payment-service', pr:'#1842 · 修复退款回调鉴权', status:'已完成', cls:'done', findings:'3 条发现', time:'2 分钟前', author:'林晓'},
-      {repo:'acme/checkout-web', pr:'#922 · 更新支付按钮状态', status:'分析中', cls:'running', findings:'等待结果', time:'8 分钟前', author:'周宁'},
-      {repo:'acme/internal-tools', pr:'#311 · 重构审计日志查询', status:'失败可重试', cls:'fail', findings:'上下文超限', time:'昨天 18:42', author:'陈默'}
-    ];
-    const personas = {
-      reviewer:[['t1','找到最高风险发现','从任务列表进入 #1842，找到高风险问题并打开证据。'],['t2','判断处理动作','标记中风险问题为忽略，并查看高风险问题的补丁预览。'],['t3','完成审批验证','确认 diff 后批准写入，查看 Verify 结果。']],
-      author:[['t1','理解问题位置','打开高风险发现，确认文件、行号和影响。'],['t2','查看修复建议','进入补丁预览，检查修改范围是否超出问题位置。'],['t3','反馈结果','返回发现列表，将中风险问题标记为误报或忽略。']],
-      admin:[['t1','检查任务健康度','打开质量报告，查看成功率、延迟和失败原因。'],['t2','判断风险边界','确认高风险发现默认不会直接阻塞合并。'],['t3','定位治理缺口','打开策略设置，查看写入审批和命令白名单状态。']]
-    };
-    const el = (id)=>document.getElementById(id);
-    function toast(msg){ const t=el('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2300); }
-    function logEvent(type, detail){ state.events.push({type, detail, at:new Date().toISOString()}); }
-    function setView(view){ state.view=view; if(view==='review') state.selectedFinding='high'; render(); logEvent('view_change',view); }
-    function statusPill(text, cls){ return `<span class="status ${cls}"><i class="fa-solid fa-circle" style="font-size:7px"></i>${text}</span>`; }
-    function render(){
-      document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));
-      el('crumbText').textContent={tasks:'审查任务',review:'发现与证据',report:'质量报告',settings:'策略设置'}[state.view]||'工作台';
-      const views={tasks:renderTasks,review:renderReview,patch:renderPatch,verify:renderVerify,report:renderReport,settings:renderSettings};
-      el('content').innerHTML=(views[state.view]||renderTasks)();
-      bindViewActions();
+const TASKS = [
+  {
+    id:'RV-1042', repo:'acme/payment-service', pr:1842, title:'修复退款回调鉴权',
+    author:'林晓', reviewer:'周航', branch:'fix/refund-auth', risk:'high', firstRepo:false,
+    diff:{ files:8, add:184, del:63 }, updated:'10 分钟前', released:false,
+    patch:{ file:'src/api/server.py', lines:'L181–L192',
+      diff:[
+        { t:'- @admin_router.get("/repositories")', del:true },
+        { t:'+ @admin_router.get("/repositories", dependencies=[Depends(require_user)])', add:true },
+        { t:'  async def list_repositories(): return await repo_store.list_all()' },
+      ] },
+    verify:{ result:null, pytest:'未运行', ruff:'未运行', cases:'未运行' },
+    stages:{
+      intake:{ s:'done', at:'10:02', sum:'8 文件 / +184 −63' },
+      analyze:{ s:'done', at:'10:04', sum:'3 发现 / 1 高危' },
+      findings:{ s:'done', at:'10:06', sum:'2 已确认 · 1 已忽略' },
+      fix:{ s:'running', pct:60, sum:'补丁 2 / 3' },
+      verify:{ s:'todo', sum:'待运行' },
+      conclusion:{ s:'todo', sum:'未放行' },
+    },
+  },
+  {
+    id:'RV-1039', repo:'acme/web-console', pr:521, title:'统一登录态过期处理',
+    author:'周航', reviewer:'林晓', branch:'feat/session-expiry', risk:'high', firstRepo:false,
+    diff:{ files:5, add:96, del:41 }, updated:'32 分钟前', released:false,
+    patch:{ file:'src/web/session.ts', lines:'L31–L44',
+      diff:[
+        { t:'- if (expired) { redirect("/login") }', del:true },
+        { t:'+ if (expired) { clearSessionCache(); redirect("/login") }', add:true },
+      ] },
+    verify:{ result:null, pytest:'未运行', ruff:'未运行', cases:'未运行' },
+    stages:{
+      intake:{ s:'done', at:'09:40', sum:'5 文件 / +96 −41' },
+      analyze:{ s:'done', at:'09:42', sum:'1 发现 / 1 高危' },
+      findings:{ s:'running', pct:40, sum:'1 待复核' },
+      fix:{ s:'todo', sum:'未开始' },
+      verify:{ s:'todo', sum:'未开始' },
+      conclusion:{ s:'todo', sum:'未放行' },
+    },
+  },
+  {
+    id:'RV-1031', repo:'acme/order-sync', pr:88, title:'重试队列幂等键修正',
+    author:'陈默', reviewer:'周航', branch:'fix/idempotent-key', risk:'high', firstRepo:true,
+    diff:{ files:3, add:58, del:22 }, updated:'1 小时前', released:false,
+    patch:{ file:'src/queue/idempotent.py', lines:'L18–L27',
+      diff:[
+        { t:'- key = f"{msg_id}:{attempt}"', del:true },
+        { t:'+ key = f"{msg_id}:{shard}:{attempt}"', add:true },
+      ] },
+    verify:{ result:'fail', pytest:'失败 1 项', ruff:'通过', cases:'幂等回收用例失败' },
+    stages:{
+      intake:{ s:'done', at:'08:55', sum:'3 文件 / +58 −22' },
+      analyze:{ s:'done', at:'08:57', sum:'1 发现 / 1 高危' },
+      findings:{ s:'done', at:'09:05', sum:'1 已确认' },
+      fix:{ s:'done', at:'09:20', sum:'补丁已应用' },
+      verify:{ s:'blocked', sum:'1 项失败：幂等回收用例' },
+      conclusion:{ s:'todo', sum:'未放行' },
+    },
+  },
+  {
+    id:'RV-1028', repo:'acme/data-pipeline', pr:310, title:'补充分片重试与告警',
+    author:'林晓', reviewer:'周航', branch:'feat/shard-retry', risk:'low', firstRepo:false,
+    diff:{ files:11, add:302, del:88 }, updated:'昨天', released:true,
+    patch:{ file:'src/pipeline/retry.py', lines:'L60–L78',
+      diff:[
+        { t:'+ retry = Retry(attempts=3, backoff=jitter)', add:true },
+      ] },
+    verify:{ result:'pass', pytest:'通过', ruff:'通过', cases:'全部通过' },
+    stages:{
+      intake:{ s:'done', at:'昨天 16:10', sum:'11 文件 / +302 −88' },
+      analyze:{ s:'done', at:'昨天 16:13', sum:'0 发现 / 0 高危' },
+      findings:{ s:'done', at:'昨天 16:30', sum:'无发现' },
+      fix:{ s:'done', at:'昨天 16:48', sum:'补丁已应用' },
+      verify:{ s:'done', at:'昨天 17:02', sum:'pytest 通过' },
+      conclusion:{ s:'done', at:'昨天 17:05', sum:'自动通过 · 未命中规则' },
+    },
+  },
+  {
+    id:'RV-1015', repo:'acme/legacy-billing', pr:12, title:'迁移旧计费脚本',
+    author:'陈默', reviewer:'林晓', branch:'chore/billing-migration', risk:'low', firstRepo:false,
+    diff:{ files:2, add:41, del:9 }, updated:'2 天前', released:false,
+    patch:null,
+    verify:{ result:null, pytest:'未运行', ruff:'未运行', cases:'未运行' },
+    stages:{
+      intake:{ s:'blocked', sum:'接入失败：仓库无读权限' },
+      analyze:{ s:'todo', sum:'待接入' },
+      findings:{ s:'todo', sum:'—' },
+      fix:{ s:'todo', sum:'—' },
+      verify:{ s:'todo', sum:'—' },
+      conclusion:{ s:'todo', sum:'—' },
+    },
+  },
+];
+
+const FINDINGS = [
+  { id:'F-1024', task:'RV-1042', title:'鉴权中间件未覆盖管理端点', sev:'high', status:'confirmed',
+    file:'src/api/server.py', line:'L181–L192',
+    desc:'路由在 app.include_router(admin_router) 处挂载，但 router 内没有声明 dependencies=[Depends(require_user)]。',
+    code:[
+      { t:'  # 该端点当前未经过统一鉴权', hot:true },
+      { t:'  @admin_router.get("/repositories")', hot:true },
+      { t:'  async def list_repositories():', hot:true },
+      { t:'      return await repo_store.list_all()', hot:true },
+    ] },
+  { id:'F-1025', task:'RV-1042', title:'重试路径没有复用请求级超时', sev:'medium', status:'confirmed',
+    file:'src/llm/client.py', line:'L72–L89',
+    desc:'LLM 重试会重新创建客户端默认超时，可能让单次审查等待时间超过任务预算。',
+    code:[ { t:'  for attempt in range(retries):' }, { t:'      client = build_client()   # 超时被重置' }, { t:'      return client.chat(...)' } ] },
+  { id:'F-1026', task:'RV-1042', title:'审查报告缺少缓存命中提示', sev:'low', status:'ignored',
+    file:'src/app/report.py', line:'L42–L49',
+    desc:'用户无法区分本次结果来自实时分析还是重复审查缓存，可能误判结果新鲜度。',
+    code:[ { t:'  return build_report(result)' } ] },
+  { id:'F-1031', task:'RV-1039', title:'登录态过期后未清理本地缓存', sev:'high', status:'pending',
+    file:'src/web/session.ts', line:'L31–L44',
+    desc:'会话过期分支只跳转登录页，未清除本地缓存的用户权限。',
+    code:[ { t:'  if (expired) { redirect("/login") }' } ] },
+  { id:'F-1042', task:'RV-1031', title:'幂等键未包含分片号', sev:'high', status:'confirmed',
+    file:'src/queue/idempotent.py', line:'L18–L27',
+    desc:'同一消息在不同分片重试时会生成相同幂等键，导致跨分片误判为重复。',
+    code:[ { t:'  key = f"{msg_id}:{attempt}"' } ] },
+];
+
+const AUDIT = [
+  { at:'今天 10:06', who:'系统', action:'生成发现', target:'RV-1042', note:'3 条，其中 1 条高危' },
+  { at:'今天 09:22', who:'周航', action:'确认发现', target:'F-1042', note:'进入修复清单' },
+  { at:'今天 09:20', who:'陈默', action:'应用补丁', target:'RV-1031', note:'3 文件，+58 −22' },
+  { at:'今天 09:05', who:'系统', action:'生成发现', target:'RV-1031', note:'1 条，高危' },
+  { at:'今天 08:30', who:'系统', action:'自动通过', target:'RV-1028', note:'未命中规则，无需人工放行' },
+];
+
+const POLICY = [
+  { id:'R1', name:'高危发现必须人工放行', desc:'命中未忽略的高危发现时，需 Reviewer 显式放行', on:true, threshold:'任意 1 条', blocking:true },
+  { id:'R2', name:'大变更需人工放行', desc:'变更行数超过阈值时进入人工放行', on:true, threshold:'500 行', blocking:true },
+  { id:'R3', name:'首次接入仓库需人工放行', desc:'仓库第一次接入时，先由 Reviewer 确认审查范围', on:true, threshold:'首次', blocking:true },
+  { id:'R4', name:'低置信度发现只记录不阻断', desc:'置信度低于阈值的发现计入报告，但不影响放行', on:false, threshold:'0.6', blocking:false },
+];
+
+const AUTH_KEY = 'cra_auth_v2';
+const ACCOUNTS = {
+  author:  { user:'author',   pass:'author123',   role:'author',   name:'林晓', title:'代码作者' },
+  reviewer:{ user:'reviewer', pass:'reviewer123', role:'reviewer', name:'周航', title:'Reviewer' },
+  admin:   { user:'admin',    pass:'admin123',    role:'admin',    name:'管理员', title:'平台管理员' },
+};
+
+const ROLES = {
+  author:   { name:'代码作者', avatar:'作', can:{ view:true, decide:false, ignore:true, release:false, policy:false, audit:false } },
+  reviewer: { name:'Reviewer', avatar:'审', can:{ view:true, decide:true, ignore:true, release:true, policy:false, audit:false } },
+  admin:    { name:'平台管理员', avatar:'管', can:{ view:false, decide:false, ignore:false, release:false, policy:true, audit:true } },
+};
+
+/* ==========================================================================
+   状态与路由
+   ========================================================================== */
+let auth = (() => {
+  try { return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch (e) { return null; }
+})();
+
+const store = {
+  role: auth ? auth.role : 'author',
+  route:{ name:'dash', taskId:null, stage:null, tab:null },
+  drawerFinding:null,
+};
+
+function parseHash(){
+  const raw = (location.hash || '#/dash').replace(/^#\/?/, '');
+  const parts = raw.split('/').filter(Boolean);
+  if(!parts.length) return { name:'dash' };
+  const [name, a, b, c] = parts;
+  if(name === 'tasks') return { name:'tasks', taskId:a || null, stage:b || null };
+  if(name === 'gov') return { name:'gov', tab:a || 'roles' };
+  return { name };
+}
+
+function go(path){ location.hash = '#/' + path; }
+
+window.addEventListener('hashchange', () => {
+  store.route = parseHash();
+  closeDrawer();
+  render();
+});
+
+function openDrawerPanel(){
+  $('#drawer').classList.add('on');
+  const sc = $('#scrim');
+  if(sc) sc.classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDrawer(){
+  const d = $('#drawer');
+  if(d) d.classList.remove('on');
+  const sc = $('#scrim');
+  if(sc) sc.classList.remove('on');
+  document.body.style.overflow = '';
+}
+
+/* ==========================================================================
+   工具
+   ========================================================================== */
+const $ = (s, r=document) => r.querySelector(s);
+const role = () => ROLES[store.role];
+const can = (k) => role().can[k];
+const task = (id) => TASKS.find(t => t.id === id);
+const finding = (id) => FINDINGS.find(f => f.id === id);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function statePill(s, pct){
+  if(s === 'done') return '<span class="pill done">✓ 已完成</span>';
+  if(s === 'running') return '<span class="pill running">● 进行中' + (pct ? ' ' + pct + '%' : '') + '</span>';
+  if(s === 'blocked') return '<span class="pill blocked">! 需修改</span>';
+  return '<span class="pill todo">○ 未开始</span>';
+}
+
+function sevPill(s){
+  const t = { high:'高危', medium:'中危', low:'低危' }[s] || s;
+  return '<span class="sev ' + s + '">' + t + '</span>';
+}
+
+function toast(msg){
+  const el = $('#toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800);
+}
+
+function stageSummary(t, key){
+  const st = t.stages[key];
+  return st.sum || '—';
+}
+
+function openHigh(t){
+  return FINDINGS.filter(f => f.task === t.id && f.sev === 'high' && f.status !== 'ignored');
+}
+
+function policyHits(t){
+  const hits = [];
+  const on = (id) => { const r = POLICY.find(x => x.id === id); return r && r.on; };
+  if(on('R1') && openHigh(t).length) hits.push({ id:'R1', note:'高危发现 ' + openHigh(t).length + ' 条' });
+  const lines = t.diff.add + t.diff.del;
+  if(on('R2') && lines > 500) hits.push({ id:'R2', note:'变更 ' + lines + ' 行' });
+  if(on('R3') && t.firstRepo) hits.push({ id:'R3', note:'首次接入仓库' });
+  return hits;
+}
+
+function releaseGate(t){
+  if(t.released) return { ok:false, reason:'已放行，历史只读' };
+  for(const k of ['intake','analyze','findings','fix']){
+    if(t.stages[k].s !== 'done') return { ok:false, reason:'「' + STAGES.find(x=>x.key===k).label + '」未完成' };
+  }
+  if(t.stages.verify.s === 'blocked') return { ok:false, reason:'验证未通过，不能放行' };
+  if(t.stages.verify.s !== 'done') return { ok:false, reason:'「验证」未完成' };
+  return { ok:true, reason:'' };
+}
+
+function auditPush(action, target, note){
+  AUDIT.unshift({ at:'刚刚', who: auth ? auth.name : '系统', action, target, note });
+  if(AUDIT.length > 30) AUDIT.pop();
+}
+
+function currentStage(t){
+  for(const s of STAGES){ if(t.stages[s.key].s !== 'done') return s.key; }
+  return 'conclusion';
+}
+
+/* ==========================================================================
+   导航
+   ========================================================================== */
+function navCount(name){
+  if(name === 'tasks') return TASKS.filter(t => currentStage(t) !== 'conclusion').length;
+  if(name === 'findings') return FINDINGS.filter(f => f.status === 'pending').length;
+  return null;
+}
+
+function renderNav(){
+  const items = [
+    { key:'dash', label:'工作台', icon:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+    { key:'tasks', label:'审查任务', icon:'M4 6h16M4 12h16M4 18h10' },
+    { key:'findings', label:'发现库', icon:'M12 3l9 17H3z M12 9v5 M12 17h.01' },
+    { key:'report', label:'质量报告', icon:'M5 20V10M12 20V4M19 20v-7' },
+    { key:'policy', label:'策略与规则', icon:'M4 7h10M18 7h2M4 17h4M12 17h8M14 5v4M8 15v4' },
+  ];
+  const gov = [
+    { key:'gov', label:'治理与审计', icon:'M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3z' },
+  ];
+
+  const mk = (list, target) => {
+    $(target).innerHTML = list.map(it => {
+      const active = (store.route.name === it.key) ? ' active' : '';
+      const n = navCount(it.key);
+      return '<button class="' + active.trim() + '" data-go="' + it.key + '">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="' + it.icon + '"/></svg>' +
+        '<span>' + it.label + '</span>' +
+        (n ? '<span class="count">' + n + '</span>' : '') +
+      '</button>';
+    }).join('');
+  };
+
+  const visible = can('view') ? items : items.filter(it => ['tasks','report','policy'].includes(it.key));
+  mk(visible, '#navMain');
+  // 治理入口仅管理员可见
+  if(can('policy') || can('audit')) mk(gov, '#navGov');
+  else $('#navGov').innerHTML = '<div class="muted" style="font-size:11px;padding:0 10px;line-height:1.6">仅平台管理员可见</div>';
+
+  document.querySelectorAll('[data-go]').forEach(b => {
+    b.onclick = () => go(b.dataset.go);
+  });
+}
+
+/* ==========================================================================
+   视图：工作台
+   ========================================================================== */
+function viewDash(){
+  const active = TASKS.filter(t => !t.released && currentStage(t) !== 'conclusion');
+  const released = TASKS.filter(t => t.released);
+  const passRate = Math.round(released.length / TASKS.length * 100);
+  const todo = FINDINGS.filter(f => f.status === 'pending');
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">WORKBENCH</div>
+        <h1>工作台</h1>
+        <p class="subtitle">${role().name}视角 · 待处理 ${active.length} 个任务、${todo.length} 条待复核发现</p>
+      </div>
+      <button class="btn btn-primary" data-act="new-task">+ 新建审查</button>
+    </div>
+
+    <div class="kpis">
+      <div class="card kpi"><div class="kpi-l">待复核发现</div><div class="kpi-v">${todo.length}</div><div class="kpi-m warn">其中高危 ${todo.filter(f=>f.sev==='high').length} 条</div></div>
+      <div class="card kpi"><div class="kpi-l">进行中任务</div><div class="kpi-v">${active.length}</div><div class="kpi-m">本周完成 ${TASKS.filter(t=>t.stages.conclusion.s==='done').length} 个</div></div>
+      <div class="card kpi"><div class="kpi-l">首结果 P95</div><div class="kpi-v">4m 02s</div><div class="kpi-m">目标 ≤ 5 分钟</div></div>
+      <div class="card kpi"><div class="kpi-l">放行率</div><div class="kpi-v">${passRate}%</div><div class="kpi-m">N=${TASKS.length}（演示数据）</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-h"><span class="card-t">进行中的任务</span><a class="card-note" href="#/tasks">全部 →</a></div>
+        <div class="table-wrap"><table class="tbl"><tbody>
+          ${active.map(t => `
+            <tr class="row" data-task="${t.id}">
+              <td style="width:34%"><div class="repo">${t.repo}</div><div class="sub">#${t.pr} · ${t.title}</div></td>
+              <td style="width:24%">${stageBar(t)}<div class="stagebar-note">${STAGES.find(s=>s.key===currentStage(t)).label} · ${currentStageLabel(t)}</div></td>
+              <td style="width:14%">${sevPill(t.risk)}</td>
+              <td style="width:16%" class="muted">${t.updated}</td>
+              <td style="width:12%"><button class="btn btn-sm" data-task="${t.id}">打开</button></td>
+            </tr>`).join('')}
+        </tbody></table></div>
+      ${active.length ? '' : '<div class="empty">没有进行中的任务</div>'}
+      </div>
+
+      <div class="stack">
+        <div class="card">
+          <div class="card-h"><span class="card-t">待办</span><span class="card-note">${todo.length} 条</span></div>
+          <div class="card-b" style="padding-top:6px">
+            ${todo.slice(0,4).map(f => `
+              <div class="finding" data-finding="${f.id}" style="padding:10px 0">
+                <div style="flex:1">
+                  <div class="finding-t">${f.title}</div>
+                  <div class="finding-l" style="margin-top:4px">${f.file} · ${f.line}</div>
+                </div>
+                ${sevPill(f.sev)}
+              </div>`).join('') || '<div class="empty">没有待复核的发现</div>'}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="card-t">最近动态</span></div>
+          <div class="card-b">
+            <ul class="tl">
+              ${AUDIT.slice(0,4).map(a => `<li>${a.who} ${a.action} <b>${a.target}</b><small>${a.at} · ${a.note}</small></li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function currentStageLabel(t){
+  const k = currentStage(t);
+  const st = t.stages[k];
+  if(st.s === 'blocked') return '需修改';
+  if(st.s === 'running') return '进行中';
+  if(st.s === 'done') return '已完成';
+  return '未开始';
+}
+
+function stageBar(t){
+  return '<div class="stagebar">' + STAGES.map(s => {
+    const st = t.stages[s.key].s;
+    return '<i class="' + (st === 'done' ? 'done' : st === 'running' ? 'running' : st === 'blocked' ? 'blocked' : '') + '"></i>';
+  }).join('') + '</div>';
+}
+
+/* ==========================================================================
+   视图：任务列表
+   ========================================================================== */
+function viewTasks(){
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">REVIEWS</div>
+        <h1>审查任务</h1>
+        <p class="subtitle">一次审查 = 一个变更集。阶段从左到右推进，卡住时会在列表上标出来。</p>
+      </div>
+      <button class="btn btn-primary" data-act="new-task">+ 新建审查</button>
+    </div>
+
+    <div class="card">
+      <div class="card-h" style="border-bottom:1px solid var(--line)">
+        <input id="taskSearch" class="search" type="search" placeholder="搜索仓库、PR 号或标题…" style="width:100%;max-width:320px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12px">
+        <span class="card-note" id="taskCount">${TASKS.length} 个任务</span>
+      </div>
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr>
+          <th style="width:26%">仓库 / 变更</th>
+          <th style="width:22%">阶段</th>
+          <th style="width:12%">风险</th>
+          <th style="width:14%">作者</th>
+          <th style="width:14%">更新</th>
+          <th style="width:12%"></th>
+        </tr></thead>
+        <tbody>
+          ${TASKS.map(t => `
+            <tr class="row" data-task="${t.id}" data-search="${(t.repo + ' ' + t.pr + ' ' + t.title + ' ' + t.id).toLowerCase()}">
+              <td><div class="repo">${t.repo}</div><div class="sub">#${t.pr} · ${t.title}</div></td>
+              <td>${stageBar(t)}<div class="stagebar-note">${STAGES.find(s=>s.key===currentStage(t)).label} · ${currentStageLabel(t)}</div></td>
+              <td>${sevPill(t.risk)}</td>
+              <td>${t.author}</td>
+              <td class="muted">${t.updated}</td>
+              <td><button class="btn btn-sm" data-task="${t.id}">打开</button></td>
+            </tr>`).join('')}
+          <tr id="taskEmpty" style="display:none"><td colspan="6"><div class="empty">没有匹配的任务，换个关键词试试</div></td></tr>
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+/* ==========================================================================
+   视图：任务详情
+   ========================================================================== */
+function viewTask(t, stageKey){
+  const key = stageKey || currentStage(t);
+  const st = t.stages[key];
+  const meta = STAGES.find(s => s.key === key);
+
+  return `
+    <div class="page-head" style="margin-bottom:12px">
+      <div>
+        <div class="eyebrow">${esc(t.repo)} · #${t.pr}</div>
+        <h1>${esc(t.title)}</h1>
+        <p class="subtitle">
+          作者 ${t.author} · Reviewer ${t.reviewer} · 分支 <span class="mono">${t.branch}</span>
+          · <span class="mono">+${t.diff.add} −${t.diff.del}</span>（${t.diff.files} 文件）
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${statePill(t.stages[currentStage(t)].s, t.stages[currentStage(t)].pct)}
+        ${can('release') && key === 'conclusion' && st.s !== 'done' ? '<button class="btn btn-ok" data-act="release" ' + (releaseGate(t).ok ? '' : 'disabled title="' + releaseGate(t).reason + '"') + '>放行</button>' : ''}
+        ${can('release') && key === 'conclusion' && st.s !== 'done' ? '<button class="btn btn-danger" data-act="block" ' + (releaseGate(t).ok ? '' : 'disabled') + '>阻断</button>' : ''}
+      </div>
+    </div>
+
+    <div class="stages">
+      ${STAGES.map(s => {
+        const sst = t.stages[s.key];
+        const cls = [s.key === key ? 'sel' : '', sst.s].filter(Boolean).join(' ');
+        return `<div class="stage ${cls}" data-stage="${s.key}">
+          <div class="stage-h"><span class="stage-dot"></span>${s.label}</div>
+          <div class="stage-s">${can('view') ? (sst.sum || s.desc) : stateLabel(sst)}</div>
+          <div class="stage-t">${sst.at || ''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    ${nextStep(t, key)}
+
+    <div class="split">
+      <div class="card">
+        <div class="card-h"><span class="card-t">${meta.label} · ${meta.desc}</span><span class="card-note">${stateLabel(st)}</span></div>
+        <div class="card-b">${stageBody(t, key)}</div>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-h"><span class="card-t">变更摘要</span></div>
+          <div class="card-b">
+            <div class="kv"><span>文件</span><span>${t.diff.files} 个</span></div>
+            <div class="kv"><span>新增 / 删除</span><span class="mono">+${t.diff.add} / −${t.diff.del}</span></div>
+            <div class="kv"><span>风险等级</span><span>${sevPill(t.risk)}</span></div>
+            <div class="kv"><span>任务当前阶段</span><span>${STAGES.find(s=>s.key===currentStage(t)).label}</span></div>
+            <div class="kv"><span>正在查看</span><span>${meta.label}</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><span class="card-t">阶段记录</span></div>
+          <div class="card-b">
+            <ul class="tl">
+              ${STAGES.filter(s => t.stages[s.key].at).map(s => `<li>${s.label}<small>${t.stages[s.key].at}${can('view') ? ' · ' + (t.stages[s.key].sum || '') : ''}</small></li>`).join('')}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function stateLabel(st){
+  if(st.s === 'done') return '已完成';
+  if(st.s === 'running') return '进行中 ' + (st.pct || '') + '%';
+  if(st.s === 'blocked') return '需修改';
+  return '未开始';
+}
+
+function nextStep(t, key){
+  const st = t.stages[key];
+  if(!can('view')) return `<div class="nextstep">当前角色（${role().name}）只能查看元数据，业务内容已隐藏。</div>`;
+
+  if(key === 'intake' && st.s === 'blocked')
+    return `<div class="nextstep">接入失败：仓库无读权限。下一步 · 作者 · 补充仓库授权后重试。<button class="btn btn-sm" data-act="retry-intake">重新接入</button></div>`;
+  if(key === 'analyze' && st.s !== 'done')
+    return `<div class="nextstep">分析未完成。下一步 · 系统 · 重新运行分析。<button class="btn btn-sm btn-primary" data-act="run-analyze">运行分析</button></div>`;
+  if(key === 'findings' && st.s !== 'done')
+    return `<div class="nextstep">还有待复核发现。下一步 · Reviewer · 确认或忽略，然后进入修复。<button class="btn btn-sm" data-act="go-fix">去修复</button></div>`;
+  if(key === 'fix' && st.s !== 'done')
+    return `<div class="nextstep">补丁未完成。下一步 · 作者 · 生成补丁并提交验证。<button class="btn btn-sm btn-primary" data-act="gen-patch">生成补丁</button></div>`;
+  if(key === 'verify' && st.s === 'blocked')
+    return `<div class="nextstep">验证失败。下一步 · 作者 · 修复后重跑。<button class="btn btn-sm btn-primary" data-act="rerun-verify">重跑验证</button></div>`;
+  if(key === 'verify' && st.s === 'todo')
+    return `<div class="nextstep">${t.stages.fix.s === 'done' ? '补丁已就绪。下一步 · 作者 · 运行验证。' : '等待修复完成。'}<button class="btn btn-sm btn-primary" data-act="run-verify" ${t.stages.fix.s === 'done' ? '' : 'disabled'}>运行验证</button></div>`;
+  if(key === 'conclusion' && st.s !== 'done'){
+    const gate = releaseGate(t);
+    return `<div class="nextstep">${can('release') ? (gate.ok ? '下一步 · Reviewer · 确认放行或阻断。' : '等待前置完成：' + gate.reason) : '等待 Reviewer 放行。'}</div>`;
+  }
+  if(key === 'conclusion' && st.s === 'done')
+    return `<div class="nextstep">审查已结束（${t.released ? '已放行' : '已阻断'}）。<a class="btn btn-sm" href="#/tasks">返回任务列表</a></div>`;
+  if(st.s === 'running') return `<div class="nextstep">「${meta.label}」进行中 ${st.pct || 0}%，完成后再继续。</div>`;
+
+  const next = STAGES[STAGES.findIndex(x => x.key === key) + 1];
+  if(next){
+    const who = next.key === 'fix' || next.key === 'verify' ? '代码作者' : next.key === 'conclusion' ? 'Reviewer' : '系统';
+    return `<div class="nextstep">下一步 · ${who} · 进入「${next.label}」。<button class="btn btn-sm" data-stage="${next.key}">去${next.label}</button></div>`;
+  }
+  return `<div class="nextstep">该阶段已完成。</div>`;
+}
+
+function stageBody(t, key){
+  if(!can('view')){
+    if(key === 'conclusion'){
+      const hits = policyHits(t);
+      return `<div class="infobox">平台管理员不查看业务内容，只保留放行依据：规则命中、责任人、时间。</div>
+        <div class="kv" style="margin-top:12px"><span>规则命中</span><span>${hits.length ? hits.map(h=>h.id).join('、') : '未命中'}</span></div>
+        <div class="kv"><span>结论</span><span>${t.released ? '已放行' : t.stages.conclusion.s === 'blocked' ? '已阻断' : '未放行'}</span></div>
+        <div class="kv"><span>责任人</span><span>${t.released || t.stages.conclusion.s === 'blocked' ? (t.stages.conclusion.sum || '').replace(/^已(放行|阻断) · /, '') : '—'}</span></div>
+        <div class="kv"><span>时间</span><span>${t.stages.conclusion.at || '—'}</span></div>`;
     }
-    function renderTasks(){ return `<div class="page-head"><div><div class="eyebrow">CODE REVIEW WORKBENCH</div><h1>审查任务</h1><div class="subtitle">围绕变更集查看审查结果、证据链和可回滚修复。</div></div><div style="display:flex;gap:8px"><button class="btn" id="openTestInline"><i class="fa-solid fa-user-check"></i>模拟用户测试</button><button class="btn btn-primary" id="newReview"><i class="fa-solid fa-plus"></i>新建审查</button></div></div>
-      <div class="metrics"><div class="metric"><div class="metric-label">待处理发现</div><div class="metric-value">12</div><div class="metric-meta warn">↑ 3 条较昨日</div></div><div class="metric"><div class="metric-label">本周完成审查</div><div class="metric-value">48</div><div class="metric-meta">↑ 18.4%</div></div><div class="metric"><div class="metric-label">首结果 P95</div><div class="metric-value">2m 18s</div><div class="metric-meta">目标 ≤ 5 分钟</div></div><div class="metric"><div class="metric-label">有帮助率</div><div class="metric-value">68%</div><div class="metric-meta">样本 N=74</div></div></div>
-      <div class="workspace-grid"><div class="card"><div class="card-head"><div><div class="card-title">最近审查</div><div class="card-note" style="margin-top:4px">按最近更新时间排序</div></div><button class="btn btn-quiet" id="refreshTasks"><i class="fa-solid fa-rotate"></i>刷新</button></div><div class="filters"><input class="search" placeholder="搜索仓库、PR 标题或作者"><select><option>全部状态</option><option>已完成</option><option>分析中</option><option>失败可重试</option></select><select><option>全部仓库</option><option>payment-service</option><option>checkout-web</option></select></div><div class="table-wrap"><table><thead><tr><th>变更集</th><th>状态</th><th>发现</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${taskData.map((x,i)=>`<tr class="task-row" data-task="${i}"><td><div class="repo">${x.repo}</div><div class="pr">${x.pr} · ${x.author}</div></td><td>${statusPill(x.status,x.cls)}</td><td>${x.findings}</td><td style="color:#798496">${x.time}</td><td><button class="btn btn-quiet open-task" data-task="${i}">打开 <i class="fa-solid fa-arrow-right"></i></button></td></tr>`).join('')}</tbody></table></div></div><div style="display:grid;gap:16px"><div class="card right-card"><div class="card-head"><div class="card-title">需要优先处理</div><span class="card-note">按风险排序</span></div><div class="risk-list"><div class="risk-item"><div><div class="risk-name">鉴权中间件未覆盖管理端点</div><div class="risk-meta">payment-service · L184-L192</div></div><span class="severity high">高风险</span></div><div class="risk-item"><div><div class="risk-name">重试路径没有复用超时</div><div class="risk-meta">checkout-web · L72-L89</div></div><span class="severity medium">中风险</span></div><div class="risk-item"><div><div class="risk-name">报告缺少缓存命中提示</div><div class="risk-meta">internal-tools · L42-L49</div></div><span class="severity low">低风险</span></div></div></div><div class="card"><div class="card-head"><div class="card-title">本周质量概览</div><button class="btn btn-quiet" id="goReport">查看报告</button></div><div class="mini-progress"><div class="mini-progress-row"><span>工具调用成功率</span><span>99.2%</span></div><div class="progress"><span style="width:99.2%"></span></div><div class="mini-progress-row"><span>高风险问题确认率</span><span>84%</span></div><div class="progress"><span style="width:84%;background:#12a28f"></span></div><div class="mini-progress-row"><span>Verify 通过率</span><span>92%</span></div><div class="progress"><span style="width:92%;background:#6d8ee8"></span></div></div></div></div></div></div>`; }
-    function renderReview(){ const selected=findings[state.selectedFinding]; return `<div class="page-head"><div><div class="eyebrow">REVIEW / acme/payment-service / PR #1842</div><h1>修复退款回调鉴权</h1><div class="subtitle">目标分支 main · 提交 7f3d1a2 · 作者 林晓 · 变更 8 个文件，+184 / -63 行</div></div><div style="display:flex;gap:8px"><button class="btn" id="backTasks"><i class="fa-solid fa-arrow-left"></i>返回任务</button><button class="btn" id="goReport"><i class="fa-solid fa-chart-line"></i>查看报告</button></div></div><div class="review-layout"><div class="card"><div class="card-head"><div><div class="card-title">发现列表</div><div class="card-note" style="margin-top:4px">已完成验证 · 3 条发现 · 最后更新 2 分钟前</div></div>${statusPill('只读审查完成','done')}</div><div class="tabs"><button class="tab active">发现（3）</button><button class="tab">执行轨迹</button><button class="tab">上下文范围</button></div><div>${Object.entries(findings).map(([key,x])=>`<div class="finding ${state.selectedFinding===key?'selected':''}" data-finding="${key}"><span class="severity ${x.cls}">${x.severity}</span><div class="finding-main"><div class="finding-title">${x.title}</div><div class="finding-desc">${x.desc}</div><div class="finding-location"><i class="fa-regular fa-file-code"></i> ${x.location}</div></div><div class="finding-status">${state.findingState[key]}</div></div>`).join('')}</div></div><div class="card"><div class="evidence"><div class="evidence-label">当前选中</div><h3>${selected.title}</h3><p>${selected.evidence}</p><div class="code">${selected.code.split('\n').map((line,i)=>`<span class="line ${i===2?'hot':''}">${line.replace(/</g,'&lt;')}</span>`).join('')}</div><div style="margin-top:13px"><div class="evidence-label">影响判断</div><p style="margin-top:6px">${selected.impact}</p></div><div class="evidence-actions"><button class="btn btn-primary" id="openPatch"><i class="fa-solid fa-wand-magic-sparkles"></i>查看修复补丁</button><button class="btn" id="ignoreFinding">${state.findingState[state.selectedFinding]==='已忽略'?'已忽略':'忽略'}</button></div></div></div></div>`; }
-    function renderPatch(){ return `<div class="page-head"><div><div class="eyebrow">REVIEW / PATCH PREVIEW</div><h1>补丁预览与审批</h1><div class="subtitle">仅展示针对 F-1024 的最小修改，审批前不会写入仓库。</div></div><button class="btn" id="backReview"><i class="fa-solid fa-arrow-left"></i>返回发现</button></div><div class="verify-grid"><div class="card"><div class="card-head"><div><div class="card-title">建议补丁</div><div class="card-note" style="margin-top:4px">src/api/server.py · 1 个文件 · +2 / -1 行</div></div>${statusPill('等待审批','pending')}</div><div class="evidence" style="padding-top:17px"><div class="diff"><span>@@ -181,5 +181,6 @@</span><span class="del">- @admin_router.get("/repositories")</span><span class="add">+ @admin_router.get("/repositories", dependencies=[Depends(require_user)])</span><span>  async def list_repositories():</span><span>      return await repo_store.list_all()</span></div><label class="check"><input type="checkbox" id="approveCheck">我已查看完整 diff，确认修改范围只覆盖当前发现，批准后将进入 Verify。</label><div style="display:flex;gap:8px;margin-top:18px"><button class="btn btn-primary" id="approvePatch" disabled><i class="fa-solid fa-check"></i>批准并要求写入</button><button class="btn" id="copyDiff"><i class="fa-regular fa-copy"></i>复制 diff</button></div></div></div><div class="card"><div class="card-head"><div class="card-title">审批边界</div></div><div class="evidence"><div class="risk-item"><div><div class="risk-name">写入权限</div><div class="risk-meta">需要 Reviewer 或管理员</div></div><span class="status done">已具备</span></div><div class="risk-item"><div><div class="risk-name">回滚点</div><div class="risk-meta">写入前自动生成 .bak</div></div><span class="status done">已具备</span></div><div class="risk-item"><div><div class="risk-name">验证命令</div><div class="risk-meta">仅允许 pytest / ruff</div></div><span class="status done">已限制</span></div><div class="feedback-note" style="margin-top:15px">审批后如果 Verify 失败，系统会保留失败证据并阻止标记为“修复成功”。</div></div></div></div>`; }
-    function renderVerify(){ return `<div class="page-head"><div><div class="eyebrow">REVIEW / VERIFY</div><h1>Verify 结果</h1><div class="subtitle">任务 F-1024 已完成受控写入，正在核验语法和回归测试。</div></div><button class="btn" id="backReview"><i class="fa-solid fa-arrow-left"></i>返回发现</button></div><div class="verify-grid"><div class="card"><div class="card-head"><div class="card-title">验证步骤</div>${statusPill(state.verified?'验证通过':'验证中',''+(state.verified?'done':'running'))}</div><div class="verify-step"><span class="step-icon ok"><i class="fa-solid fa-check"></i></span><div><div class="step-title">写入补丁</div><div class="step-sub">已创建回滚点 .bak · 1 个文件</div></div></div><div class="verify-step"><span class="step-icon ok"><i class="fa-solid fa-check"></i></span><div><div class="step-title">AST 语法校验</div><div class="step-sub">Python 语法通过</div></div></div><div class="verify-step"><span class="step-icon ${state.verified?'ok':'run'}"><i class="fa-solid ${state.verified?'fa-check':'fa-spinner fa-spin'}"></i></span><div><div class="step-title">允许列表测试</div><div class="step-sub">${state.verified?'pytest 42 passed · ruff 0 error':'pytest 正在运行，预计还需 18 秒'}</div></div></div><div class="verify-step"><span class="step-icon ${state.verified?'ok':'run'}"><i class="fa-solid ${state.verified?'fa-check':'fa-hourglass-half'}"></i></span><div><div class="step-title">回归检查</div><div class="step-sub">${state.verified?'未发现新增失败':'等待上一步完成'}</div></div></div><div style="padding:17px 18px"><button class="btn btn-primary" id="finishVerify" ${state.verified?'':'disabled'}>返回审查报告</button></div></div><div class="card"><div class="card-head"><div class="card-title">结果摘要</div></div><div class="evidence"><div class="metric" style="box-shadow:none;padding:0;border:0"><div class="metric-label">本次修复</div><div class="metric-value" style="font-size:25px">${state.verified?'通过':'进行中'}</div><div class="metric-meta">权限边界已补齐</div></div><div style="margin-top:22px"><div class="evidence-label">审计记录</div><p style="margin-top:7px">审批人：${state.role==='author'?'代码作者':'Reviewer / Tech Lead'}<br>任务：F-1024<br>时间：刚刚<br>回滚：可用</p></div></div></div></div>`; }
-    function renderReport(){ return `<div class="page-head"><div><div class="eyebrow">QUALITY REPORT</div><h1>质量报告</h1><div class="subtitle">过去 7 天 · 48 个审查任务 · 仅统计已完成任务</div></div><button class="btn" id="exportReport"><i class="fa-solid fa-download"></i>导出报告</button></div><div class="report-grid"><div class="card report-card"><div class="metric-label">发现总数</div><div class="metric-value">126</div><div class="metric-meta">高风险 18 · 中风险 67 · 低风险 41</div></div><div class="card report-card"><div class="metric-label">用户有帮助率</div><div class="metric-value">68%</div><div class="metric-meta">反馈样本 N=74</div></div><div class="card report-card"><div class="metric-label">Verify 通过率</div><div class="metric-value">92%</div><div class="metric-meta">应用补丁 N=25</div></div></div><div class="workspace-grid"><div class="card"><div class="card-head"><div><div class="card-title">每日审查量与完成率</div><div class="card-note" style="margin-top:4px">完成任务 / 发起任务</div></div></div><div class="chart"><div class="bar" style="height:44%"><strong>8</strong><small>周一</small></div><div class="bar" style="height:63%"><strong>12</strong><small>周二</small></div><div class="bar" style="height:55%"><strong>10</strong><small>周三</small></div><div class="bar" style="height:80%"><strong>15</strong><small>周四</small></div><div class="bar" style="height:73%"><strong>14</strong><small>周五</small></div><div class="bar" style="height:38%"><strong>7</strong><small>周六</small></div><div class="bar" style="height:52%"><strong>10</strong><small>周日</small></div></div></div><div class="card"><div class="card-head"><div class="card-title">用户反馈</div><span class="card-note">按标签</span></div><div class="risk-list"><div class="risk-item"><div><div class="risk-name">有帮助</div><div class="risk-meta">证据链清晰，能直接定位</div></div><strong style="color:#148477">50</strong></div><div class="risk-item"><div><div class="risk-name">误报</div><div class="risk-meta">需要更准确的上下文边界</div></div><strong style="color:#b2565f">14</strong></div><div class="risk-item"><div><div class="risk-name">忽略</div><div class="risk-meta">低风险问题暂不处理</div></div><strong style="color:#6c778a">10</strong></div></div></div></div>`; }
-    function renderSettings(){ return `<div class="page-head"><div><div class="eyebrow">POLICY & CONTROL</div><h1>策略设置</h1><div class="subtitle">定义审查范围、写入权限和验证边界。</div></div><button class="btn btn-primary" id="saveSettings"><i class="fa-solid fa-check"></i>保存策略</button></div><div class="card"><div class="card-head"><div><div class="card-title">默认安全策略</div><div class="card-note" style="margin-top:4px">适用于 acme 组织下的新任务</div></div></div><div class="evidence"><label class="check" style="margin-bottom:14px"><input type="checkbox" checked>默认只读审查，写入必须经过审批</label><label class="check" style="margin-bottom:14px"><input type="checkbox" checked>命令执行仅允许 pytest、ruff、mypy</label><label class="check" style="margin-bottom:14px"><input type="checkbox" checked>任务上下文超限时明确提示，不静默截断</label><label class="check"><input type="checkbox">允许低风险修复自动生成补丁（仍不自动写入）</label></div></div><div class="card" style="margin-top:16px"><div class="card-head"><div class="card-title">待补齐治理能力</div></div><div class="risk-list"><div class="risk-item"><div><div class="risk-name">组织级 SSO / SCIM</div><div class="risk-meta">影响企业版接入</div></div>${statusPill('规划中','pending')}</div><div class="risk-item"><div><div class="risk-name">不可篡改审计存储</div><div class="risk-meta">影响合规证明</div></div>${statusPill('规划中','pending')}</div></div></div>`; }
-    function bindViewActions(){
-      document.querySelectorAll('.open-task, .task-row').forEach(node=>node.addEventListener('click',(e)=>{ if(e.target.closest('button') || node.classList.contains('task-row')) { setView('review'); }}));
-      document.querySelectorAll('[data-finding]').forEach(n=>n.addEventListener('click',()=>{state.selectedFinding=n.dataset.finding; render();}));
-      ['backTasks','backReview'].forEach(id=>{ const n=el(id); if(n) n.addEventListener('click',()=>setView(id==='backTasks'?'tasks':'review')); });
-      ['goReport','reportLink'].forEach(id=>{ const n=el(id); if(n) n.addEventListener('click',()=>setView('report')); });
-      const patch=el('openPatch'); if(patch) patch.addEventListener('click',()=>setView('patch'));
-      const ignore=el('ignoreFinding'); if(ignore) ignore.addEventListener('click',()=>{state.findingState[state.selectedFinding]='已忽略'; logEvent('finding_feedback','ignored'); render(); toast('已记录为忽略，后续会进入反馈样本');});
-      const check=el('approveCheck'), approve=el('approvePatch'); if(check && approve) check.addEventListener('change',()=>approve.disabled=!check.checked);
-      if(approve) approve.addEventListener('click',()=>{state.approved=true; state.verified=false; setView('verify'); setTimeout(()=>{state.verified=true; render(); toast('Verify 已完成：42 passed，未发现新增失败');},900); logEvent('patch_approved','F-1024');});
-      const finish=el('finishVerify'); if(finish) finish.addEventListener('click',()=>setView('report'));
-      const copy=el('copyDiff'); if(copy) copy.addEventListener('click',()=>toast('diff 已复制到剪贴板（原型模拟）'));
-      const refresh=el('refreshTasks'); if(refresh) refresh.addEventListener('click',()=>toast('任务列表已刷新'));
-      const newReview=el('newReview'); if(newReview) newReview.addEventListener('click',()=>toast('原型中已预置演示任务，请从列表打开 #1842'));
-      const save=el('saveSettings'); if(save) save.addEventListener('click',()=>toast('策略已保存（原型模拟）'));
-      const exportReport=el('exportReport'); if(exportReport) exportReport.addEventListener('click',()=>toast('报告导出已加入队列（原型模拟）'));
-      const inline=el('openTestInline'); if(inline) inline.addEventListener('click',openTest);
-    }
-    function openTest(){ el('feedbackOverlay').classList.add('open'); renderTestTasks(); }
-    function renderTestTasks(){ const p=state.testPersona; const tasks=personas[p]; el('testBrief').textContent={reviewer:'任务：找到高风险问题，查看证据，判断是否需要修复，并完成一次审批验证。',author:'任务：确认问题位置，查看修复范围，并给出一条处理反馈。',admin:'任务：查看质量指标，确认风险边界，并定位治理能力缺口。'}[p]; el('testTasks').innerHTML=tasks.map(([id,title,desc])=>`<div class="test-task ${state.testDone[id]?'done':''}"><div class="test-task-title"><i class="fa-solid ${state.testDone[id]?'fa-circle-check':'fa-circle'}" style="color:${state.testDone[id]?'#15937e':'#a2adbb'}"></i>${title}</div><small>${desc}</small><button class="btn" style="margin:10px 0 0 22px" data-test-task="${id}">${state.testDone[id]?'已完成':'标记完成'}</button></div>`).join(''); document.querySelectorAll('[data-test-task]').forEach(b=>b.addEventListener('click',()=>{state.testDone[b.dataset.testTask]=true; logEvent('usability_task_complete',b.dataset.testTask); renderTestTasks();})); }
-    function completeTest(){ const count=Object.values(state.testDone).filter(Boolean).length; if(count<3){el('testResult').innerHTML=`<div class="feedback-note">还有 ${3-count} 个任务未完成。为了避免模拟结果偏乐观，请先走完任务再提交。</div>`; return;} el('testResult').innerHTML=`<div class="card" style="padding:15px;border-color:#b9e8db;background:#f3fcf8"><strong style="font-size:12px;color:#146f62">本轮测试已完成</strong><p style="font-size:11px;line-height:1.6;color:#4d6b67;margin:7px 0 0">完成率 3/3。原型记录了 ${state.events.filter(x=>x.type==='usability_task_complete').length} 次任务操作，可在测试报告中查看观察结论。</p></div>`; logEvent('usability_test_complete',state.testPersona); }
-    document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-    el('roleSelect').addEventListener('change',(e)=>{ state.role=e.target.value; el('avatar').textContent=e.target.value==='reviewer'?'R':e.target.value==='author'?'A':'P'; toast('已切换为'+(e.target.value==='reviewer'?' Reviewer / Tech Lead':e.target.value==='author'?' 代码作者':' 平台管理员')); });
-    el('openTest').addEventListener('click',openTest); el('testClose').addEventListener('click',()=>el('feedbackOverlay').classList.remove('open')); el('completeTest').addEventListener('click',completeTest); el('resetTest').addEventListener('click',()=>{state.testDone={};el('testResult').innerHTML='';renderTestTasks();});
-    document.querySelectorAll('.persona').forEach(b=>b.addEventListener('click',()=>{state.testPersona=b.dataset.persona;state.testDone={};document.querySelectorAll('.persona').forEach(x=>x.classList.toggle('active',x===b));el('testResult').innerHTML='';renderTestTasks();}));
-    el('drawerClose').addEventListener('click',()=>el('findingDrawer').classList.remove('open'));
+    return `<div class="infobox">平台管理员不查看业务内容（代码、发现详情）。此处只保留元数据。</div>
+      <div class="kv" style="margin-top:12px"><span>变更规模</span><span>${t.diff.files} 文件 / +${t.diff.add} −${t.diff.del}</span></div>
+      <div class="kv"><span>阶段状态</span><span>${stateLabel(t.stages[key])}</span></div>`;
+  }
+
+  if(key === 'intake'){
+    return `
+      <div class="kv"><span>仓库</span><span>${esc(t.repo)}</span></div>
+      <div class="kv"><span>变更集</span><span>#${t.pr}</span></div>
+      <div class="kv"><span>分支</span><span class="mono">${t.branch}</span></div>
+      <div class="kv"><span>作者</span><span>${t.author}</span></div>
+      <div class="kv"><span>变更规模</span><span class="mono">+${t.diff.add} −${t.diff.del} · ${t.diff.files} 文件</span></div>
+      <div style="margin-top:12px" class="warnbox">接入只拉取 diff 与必要上下文，不克隆整仓；失败时不生成任务版本。</div>`;
+  }
+
+  if(key === 'analyze'){
+    return `
+      <div class="kv"><span>静态扫描</span><span>ruff / 自定义规则 12 条</span></div>
+      <div class="kv"><span>模型分析</span><span>gpt-6-sol · 温度 0.0</span></div>
+      <div class="kv"><span>退出码</span><span class="mono">0</span></div>
+      <div class="kv"><span>耗时</span><span>2m 18s</span></div>
+      <div style="margin-top:12px">
+        <div class="card-note" style="margin-bottom:8px">工具调用轨迹</div>
+        <ul class="tl">
+          <li>解析 diff<small>8 文件 · 跳过 2 个二进制</small></li>
+          <li>静态规则匹配<small>12 条规则 · 命中 3</small></li>
+          <li>模型逐块审查<small>12 个片段 · 用时 1m 40s</small></li>
+        </ul>
+      </div>`;
+  }
+
+  if(key === 'findings'){
+    const list = FINDINGS.filter(f => f.task === t.id);
+    if(!list.length) return '<div class="empty">本次审查没有发现</div>';
+    return list.map(f => `
+      <div class="finding" data-finding="${f.id}">
+        <div style="flex:1;min-width:0">
+          <div class="finding-t">${esc(f.title)}</div>
+          <div class="finding-d">${esc(f.desc)}</div>
+          <div class="finding-l">${f.file} · ${f.line}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          ${sevPill(f.sev)}
+          <span class="card-note">${f.status === 'confirmed' ? '已确认' : f.status === 'ignored' ? '已忽略' : '待复核'}</span>
+        </div>
+      </div>`).join('');
+  }
+
+  if(key === 'fix'){
+    return `
+      <div class="card-note" style="margin-bottom:8px">建议补丁 · ${t.patch ? t.patch.file + ' · ' + t.patch.lines : '暂无补丁'}</div>
+      <div class="code">${(t.patch ? t.patch.diff : [{ t:'  （尚未生成补丁）' }]).map(l => '<span class="ln ' + (l.add ? 'add' : l.del ? 'del' : '') + '">' + esc(l.t) + '</span>').join('')}</div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-sm" data-act="view-diff">查看完整 diff</button>
+        <button class="btn btn-sm" data-act="copy-patch">复制补丁</button>
+      </div>
+      <div class="infobox" style="margin-top:12px">补丁只在本地预览；写入前自动留 .bak，Verify 未通过不标记修复成功。</div>`;
+  }
+
+  if(key === 'verify'){
+    return `
+      <div class="kv"><span>pytest</span><span>${t.verify ? t.verify.pytest : '未运行'}</span></div>
+      <div class="kv"><span>ruff</span><span>${t.verify ? t.verify.ruff : '未运行'}</span></div>
+      <div class="kv"><span>回归用例</span><span>${t.verify ? t.verify.cases : '未运行'}</span></div>
+      ${t.stages.verify.s === 'blocked' ? '<div class="warnbox" style="margin-top:12px">失败证据已保留，修复未生效，系统不会把本次变更标记为「修复成功」。</div>' : ''}`;
+  }
+
+  if(key === 'conclusion'){
+    const done = t.stages.conclusion.s === 'done';
+    const hits = policyHits(t);
+    const gate = releaseGate(t);
+    const hitText = hits.length ? hits.map(h => h.id + '（' + h.note + '）').join('、') : '未命中';
+    return `
+      <div class="kv"><span>高危发现</span><span>${openHigh(t).length} 条（已忽略不计）</span></div>
+      <div class="kv"><span>规则命中</span><span>${hitText}</span></div>
+      <div class="kv"><span>放行前置</span><span>${gate.ok ? '已满足' : gate.reason}</span></div>
+      <div class="kv"><span>当前结论</span><span>${done ? (t.released ? '已放行' : '已阻断') : '未放行'}</span></div>
+      ${done ? '' : (hits.length
+        ? '<div class="infobox" style="margin-top:12px">默认不阻断：本次命中 ' + hits.map(h=>h.id).join('、') + '，需要 Reviewer 显式放行。</div>'
+        : '<div class="infobox" style="margin-top:12px">默认不阻断：未命中任何规则，满足前置后自动通过。</div>')}`;
+  }
+
+  return '';
+}
+
+/* ==========================================================================
+   视图：发现库
+   ========================================================================== */
+function viewFindings(){
+  const list = can('view') ? FINDINGS : [];
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">FINDINGS</div>
+        <h1>发现库</h1>
+        <p class="subtitle">跨任务检索发现。每条都能回到文件与行号，忽略需要理由。</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select class="role-select" id="fSev"><option value="all">全部严重度</option><option value="high">高危</option><option value="medium">中危</option><option value="low">低危</option></select>
+        <select class="role-select" id="fStatus"><option value="all">全部状态</option><option value="pending">待复核</option><option value="confirmed">已确认</option><option value="ignored">已忽略</option></select>
+      </div>
+    </div>
+    ${!can('view') ? '<div class="card card-b infobox">当前角色为平台管理员，不展示业务内容。可在「质量报告」查看聚合指标。</div>' : `
+    <div class="card">
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr><th style="width:30%">发现</th><th style="width:10%">严重度</th><th style="width:14%">任务</th><th style="width:22%">位置</th><th style="width:12%">状态</th><th></th></tr></thead>
+        <tbody>
+          ${list.map(f => `
+            <tr class="row" data-finding="${f.id}" data-sev="${f.sev}" data-status="${f.status}">
+              <td><div class="repo" style="font-weight:650">${esc(f.title)}</div><div class="sub">${esc(f.desc.slice(0, 34))}…</div></td>
+              <td>${sevPill(f.sev)}</td>
+              <td class="mono" style="font-size:11px">${f.task}</td>
+              <td class="mono" style="font-size:11px">${f.file}<br><span class="muted">${f.line}</span></td>
+              <td>${f.status === 'confirmed' ? '<span class="pill done">已确认</span>' : f.status === 'ignored' ? '<span class="pill todo">已忽略</span>' : '<span class="pill running">待复核</span>'}</td>
+              <td><button class="btn btn-sm" data-finding="${f.id}">查看</button></td>
+            </tr>`).join('')}
+          <tr id="findEmpty" style="display:none"><td colspan="6"><div class="empty">没有符合筛选的发现</div></td></tr>
+        </tbody>
+      </table></div>
+    </div>`}`;
+}
+
+/* ==========================================================================
+   视图：质量报告
+   ========================================================================== */
+function stageRate(key){
+  const done = TASKS.filter(t => t.stages[key].s === 'done').length;
+  return Math.round(done / TASKS.length * 100);
+}
+
+function viewReport(){
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">QUALITY</div>
+        <h1>质量报告</h1>
+        <p class="subtitle">按规则与阶段统计，看「这套审查能不能信」。</p>
+      </div>
+      <button class="btn" data-act="export-report">导出 CSV</button>
+    </div>
+
+    <div class="kpis">
+      <div class="card kpi"><div class="kpi-l">高危召回</div><div class="kpi-v">4 / 4</div><div class="kpi-m">样本仅 4 条，不宜外推</div></div>
+      <div class="card kpi"><div class="kpi-l">精确率</div><div class="kpi-v">82.0%</div><div class="kpi-m">TP 41 · FP 9</div></div>
+      <div class="card kpi"><div class="kpi-l">判分完整性</div><div class="kpi-v">124 / 124</div><div class="kpi-m">零跳过 · 零异常</div></div>
+      <div class="card kpi"><div class="kpi-l">平均耗时</div><div class="kpi-v">2m 18s</div><div class="kpi-m warn">P95 4m 02s</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-h"><span class="card-t">各阶段完成率</span><span class="card-note">N=${TASKS.length} 个任务</span></div>
+        <div class="card-b">
+          ${STAGES.map((s, i) => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+              <span style="width:44px;font-size:11px;color:var(--muted)">${s.label}</span>
+              <div style="flex:1;height:9px;background:#eef1f5;border-radius:6px;overflow:hidden">
+                <div style="width:${stageRate(s.key)}%;height:100%;background:#bfd1ff"></div>
+              </div>
+              <span style="width:38px;text-align:right;font-size:11px">${stageRate(s.key)}%</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="card-t">版本对比</span></div>
+        <div class="card-b">
+          <div class="kv"><span>v1.2.0</span><span>精确率 94.0% · 召回 56.0%</span></div>
+          <div class="kv"><span>v1.3.0</span><span>精确率 82.0% · 召回 52.6%</span></div>
+          <div class="kv"><span>v1.4.0</span><span>精确率 82.0% · 召回 51.2%</span></div>
+          <div class="infobox" style="margin-top:10px">82.0% 的下修发生在 v1.3.0（修正 6 条标反样本）；跨版本不可相减。</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ==========================================================================
+   视图：策略与规则
+   ========================================================================== */
+function viewPolicy(){
+  if(!can('policy')){
+    return `<div class="page-head"><div><div class="eyebrow">POLICY</div><h1>策略与规则</h1>
+      <p class="subtitle">仅平台管理员可修改。</p></div></div>
+      <div class="card card-b infobox">当前角色没有修改规则的权限。规则由平台管理员统一维护，变更会写入审计日志。</div>`;
+  }
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">POLICY</div>
+        <h1>策略与规则</h1>
+        <p class="subtitle">默认不阻断：未命中任何规则时，审查结论自动通过。</p>
+      </div>
+      <button class="btn btn-primary" data-act="save-policy">保存</button>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="card-t">放行规则</span><span class="card-note">命中任一 → 需 Reviewer 放行</span></div>
+      <div class="card-b">
+        ${POLICY.map(r => `
+          <div class="rule">
+            <div>
+              <div class="rule-t">${r.id} · ${r.name}</div>
+              <div class="rule-d">${r.desc} · 阈值：${r.threshold}</div>
+            </div>
+            <button class="switch ${r.on ? 'on' : ''}" data-rule="${r.id}" aria-label="切换 ${r.id}"></button>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><span class="card-t">默认行为</span></div>
+      <div class="card-b">
+        <div class="kv"><span>未命中规则</span><span>自动通过并写审计</span></div>
+        <div class="kv"><span>命中规则</span><span>进入待放行，通知 Reviewer</span></div>
+        <div class="kv"><span>驳回</span><span>可选回退到「修复」或「发现」</span></div>
+      </div>
+    </div>`;
+}
+
+/* ==========================================================================
+   视图：治理
+   ========================================================================== */
+function viewGov(tab){
+  if(!can('policy') && !can('audit')) {
+    return `<div class="page-head"><div><div class="eyebrow">GOVERNANCE</div><h1>治理与审计</h1>
+      <p class="subtitle">仅平台管理员可见。</p></div></div>
+      <div class="card card-b infobox">当前角色无权访问治理模块。</div>`;
+  }
+  const t = tab || 'roles';
+  return `
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">GOVERNANCE</div>
+        <h1>治理与审计</h1>
+        <p class="subtitle">权限决定谁能做什么，审计决定做过的事能不能查。</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${t === 'roles' ? 'on' : ''}" data-tab="roles">权限与角色</button>
+      <button class="tab ${t === 'audit' ? 'on' : ''}" data-tab="audit">审计日志</button>
+    </div>
+
+    ${t === 'roles' ? `
+      <div class="card">
+        <div class="card-h"><span class="card-t">动作 × 角色</span><span class="card-note">✓ 允许 · — 不允许</span></div>
+        <div class="card-b">
+          <div class="table-wrap"><table class="matrix">
+            <thead><tr><th>动作</th><th>代码作者</th><th>Reviewer</th><th>平台管理员</th></tr></thead>
+            <tbody>
+              <tr><td>提交变更、查看自己任务的证据</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>确认 / 忽略发现</td><td class="yes">✓ 仅自己的任务</td><td class="yes">✓ 全部任务</td><td class="no">—</td></tr>
+              <tr><td>生成补丁 / 运行验证</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td></tr>
+              <tr><td>放行 / 阻断</td><td class="no">—</td><td class="yes">✓</td><td class="no">—</td></tr>
+              <tr><td>修改规则集</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+              <tr><td>查看审计日志</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+              <tr><td>查看业务内容（代码 / 发现详情）</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td></tr>
+            </tbody>
+          </table></div>
+          <div class="infobox" style="margin-top:12px">管理员不读业务内容：只能看元数据与放行依据，符合最小必要原则。</div>
+        </div>
+      </div>` : `
+      <div class="card">
+        <div class="card-h"><span class="card-t">审计日志</span><span style="display:flex;gap:8px;align-items:center"><span class="card-note">只读 · 不可编辑</span><button class="btn btn-sm" data-act="export-audit">导出 CSV</button></span></div>
+        <div class="table-wrap"><table class="tbl">
+          <thead><tr><th style="width:16%">时间</th><th style="width:14%">操作人</th><th style="width:14%">动作</th><th style="width:16%">对象</th><th>说明</th></tr></thead>
+          <tbody>
+            ${AUDIT.map(a => `<tr><td class="muted">${a.at}</td><td>${a.who}</td><td>${a.action}</td><td class="mono">${a.target}</td><td class="muted">${a.note}</td></tr>`).join('')}
+          </tbody>
+        </table></div>
+      </div>`}`;
+}
+
+/* ==========================================================================
+   登录
+   ========================================================================== */
+function loginHTML(){
+  return `
+  <div class="login-page">
+    <section class="login-hero">
+      <div class="login-brand">
+        <div class="brand-mark">审</div>
+        <div><b>可信代码审查</b><span>Agent Workbench · v2</span></div>
+      </div>
+      <div class="login-copy">
+        <span class="login-kicker">TRUSTED CODE REVIEW</span>
+        <h1>把代码审查<br>变成可复核的流水线</h1>
+        <p>从变更集接入到放行结论，每个阶段都有状态、证据和责任人。</p>
+        <div class="login-points">
+          <div><span>01</span><b>证据可回溯</b><i>每条发现都能回到文件与行号</i></div>
+          <div><span>02</span><b>放行有边界</b><i>默认不阻断，命中规则才需人工放行</i></div>
+          <div><span>03</span><b>结论可审计</b><i>谁在什么时候放行了什么</i></div>
+        </div>
+      </div>
+      <div class="login-foot">本地自托管原型 · 演示数据</div>
+    </section>
+    <section class="login-panel">
+      <form class="login-card" id="loginForm" autocomplete="on">
+        <div class="login-head">
+          <span class="login-kicker">SIGN IN</span>
+          <h2>欢迎回来</h2>
+          <p>登录后进入审查工作台</p>
+        </div>
+        <div class="login-field">
+          <label for="loginUser">用户名</label>
+          <input id="loginUser" class="input" autocomplete="username" placeholder="请输入用户名">
+        </div>
+        <div class="login-field">
+          <label for="loginPass">密码</label>
+          <input id="loginPass" class="input" type="password" autocomplete="current-password" placeholder="请输入密码">
+        </div>
+        <div class="login-error" id="loginError"></div>
+        <button class="btn btn-primary login-submit" type="submit">登录</button>
+
+        <div class="login-quick">
+          <div class="login-quick-h"><b>快捷登录</b><span>无需输入账号密码</span></div>
+          <button type="button" class="quick" data-quick="author"><b>以代码作者身份进入</b><span>处理发现、生成补丁、提交验证</span></button>
+          <button type="button" class="quick" data-quick="reviewer"><b>以 Reviewer 身份进入</b><span>复核发现、放行或阻断</span></button>
+          <button type="button" class="quick" data-quick="admin"><b>以平台管理员身份进入</b><span>维护规则、查看审计，不读业务内容</span></button>
+        </div>
+      </form>
+    </section>
+  </div>`;
+}
+
+function showLogin(){
+  const app = document.querySelector('.app');
+  const root = $('#loginRoot');
+  if(app) app.style.display = 'none';
+  root.style.display = '';
+  root.innerHTML = loginHTML();
+
+  $('#loginForm').onsubmit = (e) => {
+    e.preventDefault();
+    doLogin($('#loginUser').value.trim(), $('#loginPass').value);
+  };
+  document.querySelectorAll('[data-quick]').forEach(b => {
+    b.onclick = () => {
+      const acc = ACCOUNTS[b.dataset.quick];
+      doLogin(acc.user, acc.pass);
+    };
+  });
+  const u = $('#loginUser');
+  if(u) u.focus();
+}
+
+function showApp(){
+  $('#loginRoot').style.display = 'none';
+  document.querySelector('.app').style.display = '';
+}
+
+function doLogin(user, pass){
+  const acc = Object.values(ACCOUNTS).find(a => a.user === user && a.pass === pass);
+  if(!acc){
+    const el = $('#loginError');
+    if(el) el.textContent = user ? '用户名或密码不正确（演示账号见下方快捷登录）' : '请输入用户名和密码';
+    return;
+  }
+  auth = { role: acc.role, name: acc.name, at: Date.now() };
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch (e) {}
+  store.role = acc.role;
+  go(acc.role === 'admin' ? 'report' : 'dash');
+  render();
+  toast('欢迎，' + acc.name);
+}
+
+function doLogout(){
+  closeDrawer();
+  auth = null;
+  try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+  store.route = { name:'dash' };
+  location.hash = '';
+  render();
+  toast('已退出登录');
+}
+
+/* ==========================================================================
+   渲染
+   ========================================================================== */
+function render(){
+  if(!auth){ showLogin(); return; }
+  showApp();
+  const r = store.route;
+  // 管理员不查看业务内容：工作台/发现库直接转到质量报告（任务详情仍可看元数据）
+  if(!can('view') && (r.name === 'dash' || r.name === 'findings')){
+    location.hash = '#/report';
+    return;
+  }
+  const roleEl = $('#roleSelect');
+  roleEl.value = store.role;
+  $('#avatar').textContent = role().avatar;
+  $('#topName').textContent = auth.name;
+  $('#topRole').textContent = role().name;
+
+  renderNav();
+  renderCrumb();
+
+  if(r.name === 'tasks' && r.taskId && !task(r.taskId)){ location.hash = '#/tasks'; return; }
+
+  let html = '';
+  if(r.name === 'dash') html = viewDash();
+  else if(r.name === 'tasks') html = r.taskId ? viewTask(task(r.taskId), (r.stage && STAGES.some(x => x.key === r.stage)) ? r.stage : null) : viewTasks();
+  else if(r.name === 'findings') html = viewFindings();
+  else if(r.name === 'report') html = viewReport();
+  else if(r.name === 'policy') html = viewPolicy();
+  else if(r.name === 'gov') html = viewGov(r.tab);
+  else html = viewDash();
+
+  $('#view').innerHTML = html;
+  bind();
+}
+
+function renderCrumb(){
+  const r = store.route;
+  const map = { dash:'工作台', tasks:'审查任务', findings:'发现库', report:'质量报告', policy:'策略与规则', gov:'治理与审计' };
+  let tail = map[r.name] || '工作台';
+  if(r.name === 'tasks' && r.taskId) tail = r.taskId;
+  $('#crumb').innerHTML = '<span>可信代码审查</span><span style="opacity:.4">/</span><b>' + tail + '</b>';
+}
+
+function downloadCsv(filename, rows){
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function bindFilters(){
+  const q = $('#taskSearch');
+  if(q){
+    q.oninput = () => {
+      const kw = q.value.trim().toLowerCase();
+      let shown = 0;
+      document.querySelectorAll('tr[data-search]').forEach(tr => {
+        const hit = !kw || tr.dataset.search.includes(kw);
+        tr.style.display = hit ? '' : 'none';
+        if(hit) shown++;
+      });
+      const empty = $('#taskEmpty');
+      if(empty) empty.style.display = shown ? 'none' : '';
+      const c = $('#taskCount');
+      if(c) c.textContent = shown + ' / ' + TASKS.length + ' 个任务';
+    };
+  }
+
+  const sev = $('#fSev'), st = $('#fStatus');
+  if(sev && st){
+    const apply = () => {
+      let shown = 0;
+      document.querySelectorAll('tr[data-sev]').forEach(tr => {
+        const okS = sev.value === 'all' || tr.dataset.sev === sev.value;
+        const okT = st.value === 'all' || tr.dataset.status === st.value;
+        const hit = okS && okT;
+        tr.style.display = hit ? '' : 'none';
+        if(hit) shown++;
+      });
+      const empty = $('#findEmpty');
+      if(empty) empty.style.display = shown ? 'none' : '';
+    };
+    sev.onchange = apply;
+    st.onchange = apply;
+  }
+}
+
+function bind(){
+  document.querySelectorAll('[data-task]').forEach(el => {
+    el.onclick = (e) => { e.stopPropagation(); go('tasks/' + el.dataset.task); };
+  });
+  document.querySelectorAll('[data-stage]').forEach(el => {
+    el.onclick = () => {
+      const id = store.route.taskId;
+      go('tasks/' + id + '/' + el.dataset.stage);
+    };
+  });
+  document.querySelectorAll('[data-finding]').forEach(el => {
+    el.onclick = (e) => { e.stopPropagation(); openFinding(el.dataset.finding); };
+  });
+  document.querySelectorAll('[data-tab]').forEach(el => {
+    el.onclick = () => go('gov/' + el.dataset.tab);
+  });
+  document.querySelectorAll('[data-rule]').forEach(el => {
+    el.onclick = () => {
+      const r = POLICY.find(x => x.id === el.dataset.rule);
+      r.on = !r.on;
+      render();
+      toast(r.id + (r.on ? ' 已启用' : ' 已停用'));
+    };
+  });
+  document.querySelectorAll('[data-act]').forEach(el => {
+    el.onclick = () => act(el.dataset.act);
+  });
+  bindFilters();
+
+  // 键盘可达：行可聚焦，Enter 打开
+  document.querySelectorAll('tr[data-task], tr[data-finding]').forEach(tr => {
+    tr.tabIndex = 0;
+    tr.onkeydown = (e) => {
+      if(e.key === 'Enter'){
+        if(tr.dataset.task) go('tasks/' + tr.dataset.task);
+        else if(tr.dataset.finding) openFinding(tr.dataset.finding);
+      }
+    };
+  });
+}
+
+/* ==========================================================================
+   动作
+   ========================================================================== */
+function act(name){
+  const id = store.route.taskId;
+  const t = id ? task(id) : null;
+
+  if(name === 'new-task'){ toast('原型演示：新建审查暂未接入'); return; }
+
+  if(name === 'export-report'){
+    downloadCsv('审查质量_' + new Date().toISOString().slice(0,10) + '.csv', [
+      ['任务','仓库','PR','风险','当前阶段','文件数','新增','删除','已放行'],
+      ...TASKS.map(x => [x.id, x.repo, '#'+x.pr, x.risk, STAGES.find(s=>s.key===currentStage(x)).label, x.diff.files, x.diff.add, x.diff.del, x.released ? '是' : '否']),
+    ]);
+    toast('已导出 ' + TASKS.length + ' 条');
+    return;
+  }
+
+  if(name === 'export-audit'){
+    downloadCsv('审计日志_' + new Date().toISOString().slice(0,10) + '.csv', [
+      ['时间','操作人','动作','对象','说明'],
+      ...AUDIT.map(a => [a.at, a.who, a.action, a.target, a.note]),
+    ]);
+    toast('已导出 ' + AUDIT.length + ' 条审计');
+    return;
+  }
+
+  if(name === 'save-policy'){
+    auditPush('修改规则', '策略集', POLICY.filter(r=>r.on).map(r=>r.id).join('、') + ' 启用');
     render();
-  </script>
-  <script src="../../scripts/prototype-export-client.js?v=20261008"></script>
+    toast('规则已保存，已写入审计');
+    return;
+  }
+
+  if(!t) return;
+
+  if(name === 'run-analyze'){
+    t.stages.analyze = { s:'running', pct:0, sum:'分析中…' };
+    render();
+    let p = 0;
+    const timer = setInterval(() => {
+      p += 20;
+      t.stages.analyze = { s:'running', pct:p, sum:'分析中 ' + p + '%' };
+      if(store.route.taskId === id) render();
+      if(p >= 100){
+        clearInterval(timer);
+        let list = FINDINGS.filter(f => f.task === id);
+        if(!list.length){
+          FINDINGS.push({
+            id: 'F-' + (2000 + Math.floor(Math.random()*900)), task:id,
+            title:'新增分支缺少错误处理', sev:'medium', status:'pending',
+            file:'src/app/handler.py', line:'L54–L61',
+            desc:'异常分支只记录日志，未返回明确错误码，调用方无法区分失败类型。',
+            code:[{ t:'  except Exception:' }, { t:'      log.warning("failed")' }],
+          });
+          list = FINDINGS.filter(f => f.task === id);
+        }
+        const hi = list.filter(f => f.sev === 'high').length;
+        t.stages.analyze = { s:'done', at:'刚刚', sum:list.length + ' 发现 / ' + hi + ' 高危' };
+        t.stages.findings = { s:'running', pct:0, sum:list.length + ' 条待复核' };
+        // 动作有去处：完成后自动落到「发现」
+        go('tasks/' + id + '/findings');
+        toast('分析完成，已跳到发现');
+      }
+    }, 400);
+    return;
+  }
+
+  if(name === 'retry-intake'){
+    t.stages.intake = { s:'running', pct:50, sum:'重新接入…' };
+    render();
+    setTimeout(() => {
+      t.stages.intake = { s:'done', at:'刚刚', sum:'2 文件 / +41 −9' };
+      t.stages.analyze = { s:'todo', sum:'待运行' };
+      if(store.route.taskId === id) render();
+      toast('接入成功');
+    }, 900);
+    return;
+  }
+
+  if(name === 'go-fix'){ go('tasks/' + id + '/fix'); return; }
+
+  if(name === 'gen-patch'){
+    if(t.released){ toast('任务已放行，历史只读'); return; }
+    if(store.role !== 'author'){ toast('只有代码作者可以生成补丁'); return; }
+    t.stages.fix = { s:'running', pct:40, sum:'生成补丁…' };
+    render();
+    setTimeout(() => {
+      t.stages.fix = { s:'done', at:'刚刚', sum:'补丁已应用' };
+      t.verify = { result:'pass', pytest:'通过', ruff:'通过', cases:'全部通过' };
+      t.stages.verify = { s:'running', pct:50, sum:'验证中…' };
+      render();
+      setTimeout(() => {
+        t.stages.verify = { s:'done', at:'刚刚', sum:'pytest 通过' };
+        go('tasks/' + id + '/verify');
+        toast('补丁已应用，验证通过');
+      }, 900);
+    }, 700);
+    return;
+  }
+
+  if(name === 'run-verify'){
+    if(t.released){ toast('任务已放行，历史只读'); return; }
+    if(store.role !== 'author'){ toast('只有代码作者可以运行验证'); return; }
+    if(t.stages.fix.s !== 'done'){ toast('补丁未完成，不能验证'); return; }
+    t.stages.verify = { s:'running', pct:50, sum:'验证中…' };
+    render();
+    setTimeout(() => {
+      if(t.verify && t.verify.result === 'fail'){
+        t.stages.verify = { s:'blocked', sum:'1 项失败：' + t.verify.cases };
+        toast('验证失败，证据已保留');
+      } else {
+        t.stages.verify = { s:'done', at:'刚刚', sum:'pytest 通过' };
+        toast('验证通过');
+      }
+      if(store.route.taskId === id) render();
+    }, 900);
+    return;
+  }
+
+  if(name === 'rerun-verify'){
+    t.stages.verify = { s:'running', pct:50, sum:'验证中…' };
+    render();
+    setTimeout(() => {
+      t.stages.verify = { s:'done', at:'刚刚', sum:'pytest 通过' };
+      if(store.route.taskId === id) render();
+      toast('验证通过');
+    }, 1100);
+    return;
+  }
+
+  if(name === 'release'){
+    if(!can('release')){ toast('当前角色不能放行'); return; }
+    const gate = releaseGate(t);
+    if(!gate.ok){ toast(gate.reason); return; }
+    const hits = policyHits(t);
+    if(hits.length && !auth){ toast('需要登录后放行'); return; }
+    t.released = true;
+    t.stages.conclusion = { s:'done', at:'刚刚', sum:'已放行 · ' + (auth ? auth.name : '系统') };
+    auditPush('放行', t.id, hits.length ? '命中 ' + hits.map(h=>h.id).join('、') + '，人工放行' : '未命中规则，自动通过');
+    render();
+    toast('已放行，已写入审计');
+    return;
+  }
+
+  if(name === 'block'){
+    if(!can('release')){ toast('当前角色不能阻断'); return; }
+    t.released = false;
+    t.stages.conclusion = { s:'blocked', at:'刚刚', sum:'已阻断 · ' + (auth ? auth.name : '系统') };
+    t.stages.fix = { s:'blocked', sum:'按阻断意见返工' };
+    t.stages.verify = { s:'todo', sum:'待重新验证' };
+    t.verify = { result:null, pytest:'未运行', ruff:'未运行', cases:'未运行' };
+    auditPush('阻断', t.id, '回退到修复阶段');
+    render();
+    toast('已阻断，回退到修复');
+    return;
+  }
+
+  if(name === 'view-diff'){
+    if(!t.patch){ toast('该任务暂无补丁'); return; }
+    $('#drawerKicker').textContent = 'DIFF · ' + t.id;
+    $('#drawerTitle').textContent = t.patch.file;
+    $('#drawerBody').innerHTML =
+      '<div class="kv"><span>位置</span><span class="mono">' + t.patch.lines + '</span></div>' +
+      '<div class="code" style="margin-top:12px">' + t.patch.diff.map(l => '<span class="ln ' + (l.add ? 'add' : l.del ? 'del' : '') + '">' + esc(l.t) + '</span>').join('') + '</div>' +
+      '<div class="infobox" style="margin-top:12px">仅展示最小修改；写入前自动留 .bak，验证未通过不标记修复成功。</div>';
+    openDrawerPanel();
+    return;
+  }
+
+  if(name === 'copy-patch'){
+    if(!t.patch){ toast('该任务暂无补丁'); return; }
+    const text = t.patch.diff.map(l => l.t).join('\n');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(() => toast('补丁已复制'), () => toast('复制失败，请手动选择'));
+    } else { toast('当前环境不支持剪贴板'); }
+    return;
+  }
+
+}
+
+/* ==========================================================================
+   发现抽屉
+   ========================================================================== */
+function openFinding(fid){
+  const f = finding(fid);
+  if(!f) return;
+
+  const ownerTask = task(f.task);
+  const locked = ownerTask && ownerTask.released;
+
+  if(locked){
+    $('#drawerKicker').textContent = f.id + ' · 已归档';
+    $('#drawerTitle').textContent = f.title;
+    $('#drawerBody').innerHTML =
+      '<div class="infobox">该任务已放行，发现记录转为只读，不能再确认或忽略。</div>' +
+      '<div class="code" style="margin-top:12px">' + f.code.map(l => '<span class="ln">' + esc(l.t) + '</span>').join('') + '</div>' +
+      '<p class="subtitle" style="margin-top:12px">' + esc(f.desc) + '</p>' +
+      '<div class="kv"><span>位置</span><span class="mono">' + f.file + ' · ' + f.line + '</span></div>';
+    openDrawerPanel();
+    return;
+  }
+
+  if(!can('view')){
+    $('#drawerKicker').textContent = f.id;
+    $('#drawerTitle').textContent = '无权查看';
+    $('#drawerBody').innerHTML = '<div class="infobox">平台管理员不查看业务内容。此处只保留该发现的元数据：严重度、所属任务、是否影响放行。</div>' +
+      '<div class="kv" style="margin-top:12px"><span>严重度</span><span>' + sevPill(f.sev) + '</span></div>' +
+      '<div class="kv"><span>所属任务</span><span class="mono">' + f.task + '</span></div>';
+    openDrawerPanel();
+    return;
+  }
+
+  $('#drawerKicker').textContent = f.id + ' · 发现详情';
+  $('#drawerTitle').textContent = f.title;
+  $('#drawerBody').innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
+      ${sevPill(f.sev)}
+      <span class="card-note">${f.status === 'confirmed' ? '已确认' : f.status === 'ignored' ? '已忽略' : '待复核'}</span>
+    </div>
+    <div class="code">${f.code.map(l => '<span class="ln' + (l.hot ? ' hot' : '') + '">' + esc(l.t) + '</span>').join('')}</div>
+    <p class="subtitle" style="margin-top:12px">${esc(f.desc)}</p>
+    <div class="kv"><span>位置</span><span class="mono">${f.file} · ${f.line}</span></div>
+    <div class="kv"><span>所属任务</span><span class="mono">${f.task}</span></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-sm btn-primary" data-fact="confirm">确认</button>
+      <button class="btn btn-sm" data-fact="ignore">忽略</button>
+    </div>`;
+  openDrawerPanel();
+
+  document.querySelectorAll('[data-fact]').forEach(b => {
+    b.onclick = () => {
+      const kind = b.dataset.fact;
+      const t2 = task(f.task);
+      if(t2 && t2.released){ toast('任务已放行，历史只读'); return; }
+      if(store.role === 'author' && t2 && t2.author !== auth.name){ toast('只能处理自己任务的发现'); return; }
+      if(kind === 'confirm'){
+        if(!can('decide') && !can('view')){ toast('当前角色不能确认'); return; }
+        f.status = 'confirmed';
+        auditPush('确认发现', f.id, '进入修复清单');
+        toast('已确认 · 进入修复清单');
+      } else {
+        if(!can('ignore')){ toast('当前角色不能忽略'); return; }
+        f.status = 'ignored';
+        auditPush('忽略发现', f.id, '需在报告中说明理由');
+        toast('已忽略 · 需在报告中说明');
+      }
+      $('#drawer').classList.remove('on');
+      render();
+    };
+  });
+}
+
+/* ==========================================================================
+   初始化
+   ========================================================================== */
+$('#logoutBtn').onclick = () => doLogout();
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const d = $('#drawer');
+    if(d && d.classList.contains('on')) d.classList.remove('on');
+  }
+});
+$('#scrim').onclick = () => closeDrawer();
+$('#drawerClose').onclick = () => $('#drawer').classList.remove('on');
+$('#roleSelect').onchange = (e) => {
+  const acc = ACCOUNTS[e.target.value];
+  store.role = e.target.value;
+  auth = { role: acc.role, name: acc.name, at: Date.now() };
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch (err) {}
+  if(!can('view') && ['dash','tasks','findings'].includes(store.route.name)){
+    go('report');
+    toast('管理员不查看业务内容，已转到质量报告');
+    return;
+  }
+  render();
+  toast('已切换为 ' + role().name);
+};
+
+store.route = parseHash();
+render();
+</script>
 </body>
 </html>
