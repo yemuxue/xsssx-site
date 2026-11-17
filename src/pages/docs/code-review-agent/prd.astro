@@ -1,0 +1,321 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+const figures = {
+  f01: '/docs/code-review-agent/figures/01_F01_系统上下文.png',
+  f02: '/docs/code-review-agent/figures/02_F02_业务能力地图.png',
+  f03: '/docs/code-review-agent/figures/03_F03_角色与权限矩阵.png',
+  u01: '/docs/code-review-agent/figures/04_U01_代码作者用例.png',
+  d01: '/docs/code-review-agent/figures/07_D01_主流程泳道图.png',
+  d02: '/docs/code-review-agent/figures/08_D02_任务状态机.png',
+  d03: '/docs/code-review-agent/figures/09_D03_页面流程图.png',
+  d04: '/docs/code-review-agent/figures/10_D04_一次审查时序图.png',
+  c01: '/docs/code-review-agent/figures/11_C01_三场景覆盖矩阵.png',
+  c02: '/docs/code-review-agent/figures/12_C02_放行判定流程.png',
+  p01: '/docs/code-review-agent/figures/13_P01_部署与数据流.png',
+};
+
+const toc = [
+  ['summary', '摘要'],
+  ['background', '01 背景与问题'],
+  ['goals', '02 目标与非目标'],
+  ['roles', '03 角色与权限'],
+  ['scope', '04 功能范围'],
+  ['flow', '05 主流程与状态'],
+  ['pages', '06 页面与交互'],
+  ['rules', '07 规则与放行'],
+  ['metrics', '08 指标与评测'],
+  ['nonfunc', '09 非功能与风险'],
+  ['plan', '10 里程碑'],
+  ['appendix', '附录'],
+];
+---
+
+<BaseLayout
+  title="可信代码审查 Agent · 产品需求文档"
+  description="从人工 Review 的等待与不可复核，到可核验、可处理、可回滚的审查单元。产品需求文档 v1.0。"
+  type="article"
+>
+  <main class="wrap">
+    <nav class="crumb"><a href="/works/code-review-agent/">← 返回作品</a></nav>
+
+    <header class="hero">
+      <p class="eyebrow">PRD · v1.0 · 2026.11</p>
+      <h1>可信代码审查 Agent</h1>
+      <p class="lede">
+        把「AI 生成评论」做成可核验、可处理、可回滚的审查单元。
+        这份文档说明它解决什么问题、边界在哪、以及每个判断的依据。
+      </p>
+      <dl class="meta">
+        <div><dt>范围</dt><dd>MVP · 只读审查 + 审批后修复</dd></div>
+        <div><dt>角色</dt><dd>代码作者 / Reviewer / 平台管理员</dd></div>
+        <div><dt>状态</dt><dd>原型已验证，待试点</dd></div>
+      </dl>
+    </header>
+
+    <div class="layout">
+      <aside class="toc">
+        <p class="toc-title">目录</p>
+        <ol>
+          {toc.map(([id, label]) => (
+            <li><a href={`#${id}`}>{label}</a></li>
+          ))}
+        </ol>
+      </aside>
+
+      <article class="doc">
+        <section id="summary" class="summary">
+          <h2>摘要</h2>
+          <div class="cards">
+            <div class="card">
+              <p class="k">问题</p>
+              <p>合入前的审查依赖人工：等待长、判断不可复核、低风险问题消耗高工。</p>
+            </div>
+            <div class="card">
+              <p class="k">方案</p>
+              <p>六阶段流水线：接入 → 分析 → 发现 → 修复 → 验证 → 结论，每步留下证据。</p>
+            </div>
+            <div class="card">
+              <p class="k">结果</p>
+              <p>Precision 82.0%、Recall 51.2%，124 条标注全部判分，高危 4/4 召回。</p>
+            </div>
+            <div class="card">
+              <p class="k">边界</p>
+              <p>默认不阻断合并；补丁只读预览；管理员不读业务内容。</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="background">
+          <h2>01 背景与问题</h2>
+          <p>
+            使用 PR 流程的团队，合入前的审查环节依赖人工 Reviewer。三个结构性痛点：
+          </p>
+          <ul>
+            <li><strong>审查时间与开发节奏错位。</strong>作者被阻塞，Reviewer 被打断。</li>
+            <li><strong>低风险问题消耗高级工程师注意力。</strong>命名、日志、注释类问题占掉大半时间。</li>
+            <li><strong>评论缺少可复现证据。</strong>作者不信，Reviewer 也无法回溯当时的判断。</li>
+          </ul>
+          <p>
+            产品机会在于把每个高风险问题变成可核验、可处理、可回滚的决策单元，并非再接入一个模型入口。
+          </p>
+        </section>
+
+        <section id="goals">
+          <h2>02 目标与非目标</h2>
+          <table>
+            <thead><tr><th>类型</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td>目标</td><td>审查结果可复核：每条发现带文件、行号、代码片段与验证结论</td></tr>
+              <tr><td>目标</td><td>审查过程可处理：确认 / 忽略 / 修复 / 验证都有明确动作与去处</td></tr>
+              <tr><td>目标</td><td>结论默认不阻断：先让人愿意看，再谈自动化</td></tr>
+              <tr><td>非目标</td><td>不做全自动合入，不替代 Reviewer 的判断</td></tr>
+              <tr><td>非目标</td><td>不追求覆盖率数字，不把低置信度发现包装成结论</td></tr>
+              <tr><td>非目标</td><td>MVP 不做多租户计费与私有化部署</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="roles">
+          <h2>03 角色与权限</h2>
+          <p>三个角色，两个越界点被显式禁止：作者不能放行，管理员不能看业务内容。</p>
+          <figure>
+            <img src={figures.f03} alt="角色与权限矩阵" loading="lazy" />
+            <figcaption>图 F03 · 角色与权限矩阵</figcaption>
+          </figure>
+        </section>
+
+        <section id="scope">
+          <h2>04 功能范围</h2>
+          <p>六个入口分三组：工作（工作台 / 审查任务 / 发现库）、质量（质量报告）、治理（策略与规则 / 治理与审计）。</p>
+          <figure>
+            <img src={figures.f02} alt="业务能力地图" loading="lazy" />
+            <figcaption>图 F02 · 业务能力地图</figcaption>
+          </figure>
+          <p>系统只依赖四类外部系统，写回动作只有一处。</p>
+          <figure>
+            <img src={figures.f01} alt="系统上下文图" loading="lazy" />
+            <figcaption>图 F01 · 系统上下文图</figcaption>
+          </figure>
+        </section>
+
+        <section id="flow">
+          <h2>05 主流程与状态</h2>
+          <p>六个阶段，三条泳道。角色只在需要判断的地方介入。</p>
+          <figure>
+            <img src={figures.d01} alt="主流程泳道图" loading="lazy" />
+            <figcaption>图 D01 · 主流程泳道图</figcaption>
+          </figure>
+          <p>每个阶段只有四种状态；失败不生成新版本，也不标记修复成功。</p>
+          <figure>
+            <img src={figures.d02} alt="任务状态机" loading="lazy" />
+            <figcaption>图 D02 · 任务状态机</figcaption>
+          </figure>
+        </section>
+
+        <section id="pages">
+          <h2>06 页面与交互</h2>
+          <p>入口是工作台，主路径是任务列表 → 阶段视图 → 发现 → 补丁 → 验证 → 结论。</p>
+          <figure>
+            <img src={figures.d03} alt="页面流程图" loading="lazy" />
+            <figcaption>图 D03 · 页面流程图</figcaption>
+          </figure>
+          <p>一次审查在系统之间按固定顺序发生：托管平台提供 diff，模型逐块判断，CI 负责验证。</p>
+          <figure>
+            <img src={figures.d04} alt="一次审查的时序" loading="lazy" />
+            <figcaption>图 D04 · 一次审查的时序</figcaption>
+          </figure>
+        </section>
+
+        <section id="rules">
+          <h2>07 规则与放行</h2>
+          <p>默认不阻断：未命中规则时结论自动通过，命中才进入待放行。</p>
+          <table>
+            <thead><tr><th>规则</th><th>条件</th><th>结果</th></tr></thead>
+            <tbody>
+              <tr><td>R1</td><td>存在未忽略的高危发现</td><td>待人工放行</td></tr>
+              <tr><td>R2</td><td>变更超过 500 行</td><td>待人工放行</td></tr>
+              <tr><td>R3</td><td>首次接入该仓库</td><td>待人工放行</td></tr>
+              <tr><td>R4</td><td>低置信度发现</td><td>只记录，不阻断</td></tr>
+            </tbody>
+          </table>
+          <figure>
+            <img src={figures.c02} alt="放行判定流程" loading="lazy" />
+            <figcaption>图 C02 · 放行判定流程</figcaption>
+          </figure>
+          <p>放行动作有前置条件：六个阶段未走完时，按钮保持禁用并说明原因。</p>
+        </section>
+
+        <section id="metrics">
+          <h2>08 指标与评测</h2>
+          <table>
+            <thead><tr><th>指标</th><th>数值</th><th>口径</th></tr></thead>
+            <tbody>
+              <tr><td>Precision</td><td>82.0%</td><td>TP 41 / (TP 41 + FP 9)</td></tr>
+              <tr><td>Recall</td><td>51.2%</td><td>TP 41 / (TP 41 + FN 39)</td></tr>
+              <tr><td>F1</td><td>0.63</td><td>2PR / (P + R)</td></tr>
+              <tr><td>判分完整性</td><td>124 / 124</td><td>数据集 llm-agent-qa-system-labeled v1.4.0</td></tr>
+            </tbody>
+          </table>
+          <p class="note">
+            高危及 4 / 4 全部命中；中危 53%、低危 47.5%。
+            历史版本（v1.2.0 94.0%、v1.3.0 82.0%）口径不同，不参与跨版本相减。
+          </p>
+          <figure>
+            <img src={figures.c01} alt="三场景覆盖矩阵" loading="lazy" />
+            <figcaption>图 C01 · 三场景覆盖矩阵</figcaption>
+          </figure>
+        </section>
+
+        <section id="nonfunc">
+          <h2>09 非功能与风险</h2>
+          <ul>
+            <li><strong>时延：</strong>单次审查 P95 控制在 5 分钟内，超时给出可重试的明确状态。</li>
+            <li><strong>隔离：</strong>Worker 不落业务代码，只保留 diff 片段与证据。</li>
+            <li><strong>审计：</strong>放行、阻断、规则变更、补丁应用全部留痕，管理员只读。</li>
+            <li><strong>风险：</strong>模型误报导致信任流失 —— 用默认不阻断与证据链兜底，而非提高阈值。</li>
+          </ul>
+          <figure>
+            <img src={figures.p01} alt="部署与数据流" loading="lazy" />
+            <figcaption>图 P01 · 部署与数据流</figcaption>
+          </figure>
+        </section>
+
+        <section id="plan">
+          <h2>10 里程碑</h2>
+          <table>
+            <thead><tr><th>阶段</th><th>交付</th><th>验证方式</th></tr></thead>
+            <tbody>
+              <tr><td>M1 只读审查</td><td>六阶段流水线 + 证据链</td><td>124 条标注集判分</td></tr>
+              <tr><td>M2 处理闭环</td><td>确认 / 忽略 / 补丁 / 验证</td><td>端到端 5 个演示任务</td></tr>
+              <tr><td>M3 治理</td><td>规则集、权限矩阵、审计</td><td>越界用例全部被拒</td></tr>
+              <tr><td>M4 试点</td><td>单仓库灰度</td><td>放行率与误报反馈</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="appendix">
+          <h2>附录</h2>
+          <p><strong>图册：</strong>13 张核心图（F / U / D / C / P 编号），源文件与图册文档见 GitHub 仓库。</p>
+          <p><strong>术语：</strong>阶段指六段流水线中的一个；状态指阶段内的四态；证据指文件、行号与代码片段；放行指 Reviewer 对结论的显式确认。</p>
+          <p><strong>口径：</strong>页面内所有任务、仓库与数字均为演示数据，评测读数以 v1.4.0 为准。</p>
+        </section>
+      </article>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 24px 24px 96px; }
+  .crumb { margin-bottom: 28px; font-size: 0.86rem; }
+  .crumb a { color: var(--muted); text-decoration: none; }
+  .crumb a:hover { color: var(--accent); }
+
+  .hero { max-width: 46rem; margin-bottom: 48px; }
+  .eyebrow {
+    margin: 0 0 12px; font-family: var(--font-mono); font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  }
+  .hero h1 {
+    margin: 0 0 14px; font-family: var(--font-serif); font-weight: 600;
+    font-size: clamp(2rem, 4vw, 2.9rem); line-height: 1.15; color: var(--text);
+  }
+  .lede { margin: 0 0 26px; font-size: 1.05rem; line-height: 1.75; color: var(--text-soft); }
+  .meta {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 1px; margin: 0; background: var(--border); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .meta div { background: var(--bg-elev); padding: 14px 16px; }
+  .meta dt { font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+  .meta dd { margin: 0; font-size: 0.88rem; color: var(--text); }
+
+  .layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 3.5rem; align-items: start; }
+  .toc { position: sticky; top: 88px; font-size: 0.84rem; }
+  .toc-title { margin: 0 0 10px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .toc a { color: var(--text-soft); text-decoration: none; display: block; padding: 3px 0 3px 10px; border-left: 2px solid transparent; }
+  .toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+
+  .doc { max-width: 46rem; }
+  .doc section { margin-bottom: 56px; scroll-margin-top: 88px; }
+  .doc h2 {
+    margin: 0 0 16px; font-family: var(--font-serif); font-weight: 600;
+    font-size: 1.5rem; color: var(--text); padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .doc p { margin: 0 0 14px; line-height: 1.85; color: var(--text-soft); }
+  .doc ul { margin: 0 0 16px; padding-left: 1.2rem; line-height: 1.85; color: var(--text-soft); }
+  .doc li { margin-bottom: 6px; }
+  .doc strong { color: var(--text); font-weight: 600; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 12px; }
+  .card { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .card .k { margin: 0 0 6px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .card p:last-child { margin: 0; font-size: 0.92rem; line-height: 1.7; }
+
+  .doc table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 0.88rem; }
+  .doc th, .doc td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+  .doc th { background: var(--bg-soft); font-weight: 600; color: var(--text); }
+  .doc tbody tr:nth-child(even) td { background: #fcfbf8; }
+
+  .doc figure { margin: 20px 0 28px; }
+  .doc figure img {
+    width: 100%; height: auto; display: block;
+    border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+  }
+  .doc figcaption {
+    margin-top: 10px; font-size: 0.78rem; color: var(--muted);
+    font-family: var(--font-mono); letter-spacing: 0.02em;
+  }
+  .note {
+    font-size: 0.86rem; color: var(--muted); background: var(--bg-soft);
+    border-left: 3px solid var(--border-strong); padding: 10px 14px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 12px; }
+    .toc { position: static; order: -1; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--bg-elev); }
+    .toc ol { flex-direction: row; flex-wrap: wrap; gap: 8px 14px; }
+    .toc a { padding: 0; border: 0; }
+  }
+</style>
