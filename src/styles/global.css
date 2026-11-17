@@ -880,7 +880,7 @@ html[data-theme='dark'] .icon-btn .moon {
    ========================================================= */
 .about-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
   gap: clamp(2rem, 5vw, 4rem);
   align-items: start;
 }
@@ -900,6 +900,11 @@ html[data-theme='dark'] .icon-btn .moon {
   font-size: 1.02rem;
   line-height: 1.85;
   color: var(--text-soft);
+}
+
+/* 避免尾行只剩一两个字（「结果如 / 何。」这种），仍保持整行铺满 */
+.about-text p {
+  text-wrap: pretty;
 }
 
 .panel {
