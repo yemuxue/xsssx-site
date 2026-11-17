@@ -59,15 +59,22 @@ function rawUrl(relPath) {
   return `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encoded}?t=${Date.now()}`;
 }
 
+/** 备用源：jsDelivr 镜像，raw 拉取失败时兜底 */
+function jsdelivrUrl(relPath) {
+  const encoded = relPath.split('/').map(encodeURIComponent).join('/');
+  return `https://cdn.jsdelivr.net/gh/${REPO}@${BRANCH}/${encoded}`;
+}
+
 async function fetchBuffer(relPath) {
-  const res = await fetch(rawUrl(relPath), {
-    headers: {
-      'user-agent': 'xsssx-site-sync',
-      ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}),
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
+  const headers = {
+    'user-agent': 'xsssx-site-sync',
+    ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}),
+  };
+  for (const url of [rawUrl(relPath), jsdelivrUrl(relPath)]) {
+    const res = await fetch(url, { headers });
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+  }
+  throw new Error(`两个源均失败：${relPath.split('/').pop()}`);
 }
 
 async function withRetry(label, fn) {

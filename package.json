@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.34.9",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/check-assets.mjs",
     "preview": "astro preview",
     "prebuild": "node scripts/fetch-prd.mjs --assets-only"
   },
