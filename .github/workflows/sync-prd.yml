@@ -1,0 +1,36 @@
+name: Sync PRD
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [prd-updated]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 拉取最新 PRD
+        run: node scripts/fetch-prd.mjs
+
+      - name: 有变化则提交
+        run: |
+          if git diff --quiet -- src/pages/docs/code-review-agent/prd.md; then
+            echo "PRD 无变化，跳过提交"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/docs/code-review-agent/prd.md
+          git commit -m "chore(prd): 同步 code-review-agent 最新 PRD"
+          git push
