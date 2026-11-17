@@ -44,15 +44,25 @@ async function syncFigures() {
   await mkdir(FIG_DIR, { recursive: true });
   let ok = 0;
   for (const name of FIGURES) {
-    try {
-      const res = await fetch(`${RAW}/${encodeURIComponent(name)}`, {
-        headers: { 'user-agent': 'xsssx-site-build' },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await writeFile(path.join(FIG_DIR, name), Buffer.from(await res.arrayBuffer()));
+    let lastErr;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const res = await fetch(`${RAW}/${encodeURIComponent(name)}`, {
+          headers: { 'user-agent': 'xsssx-site-build' },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await writeFile(path.join(FIG_DIR, name), Buffer.from(await res.arrayBuffer()));
+        lastErr = null;
+        break;
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 600 * attempt));
+      }
+    }
+    if (lastErr) {
+      console.warn(`[prd] 图 ${name} 拉取失败：${lastErr.message}`);
+    } else {
       ok += 1;
-    } catch (err) {
-      console.warn(`[prd] 图 ${name} 拉取失败：${err.message}`);
     }
   }
   console.log(`[prd] 图册 ${ok}/${FIGURES.length} 张已同步`);
