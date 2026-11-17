@@ -24,6 +24,7 @@ const OUT = path.resolve('src/pages/docs/code-review-agent/prd.md');
 const DOCS = path.resolve('public/docs/code-review-agent');
 const FIG_DIR = path.join(DOCS, 'figures');
 const SHOT_DIR = path.join(DOCS, 'shots');
+const USABILITY_OUT = path.resolve('src/pages/docs/code-review-agent/usability.md');
 
 const FIGURES = [
   '01_F01_系统上下文.png', '02_F02_业务能力地图.png', '03_F03_角色与权限矩阵.png',
@@ -121,24 +122,41 @@ async function syncDir(label, files, repoDir, outDir) {
   console.log(`[sync] ${label} ${ok}/${files.length}`);
 }
 
+const USABILITY_FRONTMATTER = `---
+layout: ../../../layouts/DocLayout.astro
+title: 可信代码审查 Agent · 可用性测试报告
+eyebrow: USABILITY · 2026.10
+lede: 基于可点击原型的角色模拟测试，用于提前发现交互阻塞点；结论不能替代真实用户访谈。
+meta:
+  - { k: 角色, v: 'Reviewer / 代码作者 / 平台管理员' }
+  - { k: 任务, v: '9 / 9 完成' }
+  - { k: 性质, v: '角色模拟，非真实用户' }
+---
+
+`;
+
 async function syncUsability() {
   const buf = await withRetry('可用性报告', () =>
-    fetchBuffer(`${DIR}/01_正式文档/可信代码审查Agent-可用性测试报告.html`),
+    fetchBuffer(`${DIR}/01_正式文档/可信代码审查Agent-可用性测试报告.md`),
   );
   if (!buf) {
-    console.warn('[sync] 可用性报告沿用本地副本');
+    if (!existsSync(USABILITY_OUT)) throw new Error('可用性报告拉取失败且无本地副本');
+    console.warn('[sync] 可用性报告沿用已有文件');
     return;
   }
-  const html = buf
-    .toString('utf8')
-    .replaceAll('../02_核心图_PNG/00_界面截图/', 'shots/')
-    .replaceAll('../原型截图/', 'shots/');
-  await mkdir(DOCS, { recursive: true });
-  await writeFile(path.join(DOCS, 'usability.html'), html, 'utf8');
+  const body = stripIntro(buf.toString('utf8'));
+  await writeFile(USABILITY_OUT, USABILITY_FRONTMATTER + body, 'utf8');
   console.log('[sync] 可用性报告已更新');
 }
 
-await syncPrd();
+// --assets-only：构建期只补图（prd.md / usability.md 由 workflow 提交，构建不覆盖）
+const assetsOnly = process.argv.includes('--assets-only');
+
+if (assetsOnly) {
+  console.log('[sync] 仅同步图资源');
+} else {
+  await syncPrd();
+  await syncUsability();
+}
 await syncDir('图册', FIGURES, '', FIG_DIR);
 await syncDir('截图', SHOTS, '00_界面截图/', SHOT_DIR);
-await syncUsability();

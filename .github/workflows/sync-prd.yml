@@ -25,12 +25,13 @@ jobs:
 
       - name: 有变化则提交
         run: |
-          if git diff --quiet -- src/pages/docs/code-review-agent/prd.md; then
-            echo "PRD 无变化，跳过提交"
+          FILES="src/pages/docs/code-review-agent/prd.md src/pages/docs/code-review-agent/usability.md"
+          if git diff --quiet -- $FILES; then
+            echo "文档无变化，跳过提交"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/pages/docs/code-review-agent/prd.md
-          git commit -m "chore(prd): 同步 code-review-agent 最新 PRD"
+          git add $FILES
+          git commit -m "chore(docs): 同步 code-review-agent 最新文档"
           git push
