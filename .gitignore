@@ -24,3 +24,5 @@ id_rsa*
 
 # 构建时从 code-review-agent 仓库拉取，不入库
 public/docs/code-review-agent/figures/
+public/docs/code-review-agent/shots/
+public/docs/code-review-agent/usability.html
