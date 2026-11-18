@@ -26,3 +26,8 @@ id_rsa*
 public/docs/code-review-agent/figures/
 public/docs/code-review-agent/shots/
 public/docs/code-review-agent/usability.html
+
+# colorcheck 资源构建时拉取
+public/data/colorcheck/
+public/covers/colorcheck/
+public/docs/colorcheck/

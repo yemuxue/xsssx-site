@@ -692,6 +692,7 @@ html[data-theme='dark'] .icon-btn .moon {
 
 .prose {
   max-width: 68ch;
+  margin-inline: auto;
   font-size: 1.02rem;
   line-height: 1.85;
   color: var(--text-soft);
@@ -801,10 +802,10 @@ html[data-theme='dark'] .icon-btn .moon {
 @media (min-width: 1024px) {
   .prose p > img {
     display: block;
-    width: calc(100% + 16rem);
+    width: min(72rem, calc(100vw - 5rem));
     max-width: none;
-    margin-left: -8rem;
-    margin-right: -8rem;
+    margin-left: calc((100% - min(72rem, calc(100vw - 5rem))) / 2);
+    margin-right: 0;
   }
 }
 

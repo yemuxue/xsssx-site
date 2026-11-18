@@ -28,6 +28,15 @@ const SHOT_DIR = path.join(DOCS, 'shots');
 const USABILITY_OUT = path.resolve('src/pages/docs/code-review-agent/usability.md');
 const CC_OUT = path.resolve('src/content/notes/colorcheck-method.md');
 
+// colorcheck 的图、封面与数据包：仓库路径 → 站点路径
+const CC_ASSETS = [
+  ['02_核心图_PNG/00_封面.png', 'public/covers/colorcheck/cover.png'],
+  ['02_核心图_PNG/01_F01_实验设计.png', 'public/docs/colorcheck/figures/01_F01_实验设计.png'],
+  ['02_核心图_PNG/02_C01_三模型结果矩阵.png', 'public/docs/colorcheck/figures/02_C01_三模型结果矩阵.png'],
+  ['03_数据产物/results.zip', 'public/data/colorcheck/results.zip'],
+  ['03_数据产物/stimuli.zip', 'public/data/colorcheck/stimuli.zip'],
+];
+
 const FIGURES = [
   '01_F01_系统上下文.png', '02_F02_业务能力地图.png', '03_F03_角色与权限矩阵.png',
   '04_U01_代码作者用例.png', '05_U02_Reviewer用例.png', '06_U03_平台管理员用例.png',
@@ -81,12 +90,12 @@ async function fetchBuffer(relPath, repo = REPO) {
 
 async function withRetry(label, fn) {
   let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
     try {
       return await fn();
     } catch (err) {
       lastErr = err;
-      await new Promise((r) => setTimeout(r, 700 * attempt));
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
     }
   }
   console.warn(`[sync] ${label} 失败：${lastErr.message}`);
@@ -173,6 +182,22 @@ async function syncColorcheck() {
   console.log('[sync] colorcheck 方法文章已更新');
 }
 
+async function syncColorcheckAssets() {
+  let ok = 0;
+  for (const [src, dest] of CC_ASSETS) {
+    const buf = await withRetry(`colorcheck ${src.split('/').pop()}`, () =>
+      fetchBuffer(src, CC_REPO),
+    );
+    if (buf) {
+      const target = path.resolve(dest);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, buf);
+      ok += 1;
+    }
+  }
+  console.log(`[sync] colorcheck 资源 ${ok}/${CC_ASSETS.length}`);
+}
+
 // --assets-only：构建期只补图（prd.md / usability.md 由 workflow 提交，构建不覆盖）
 const assetsOnly = process.argv.includes('--assets-only');
 
@@ -185,3 +210,4 @@ if (assetsOnly) {
 }
 await syncDir('图册', FIGURES, '', FIG_DIR);
 await syncDir('截图', SHOTS, '00_界面截图/', SHOT_DIR);
+await syncColorcheckAssets();
