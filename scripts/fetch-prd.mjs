@@ -16,6 +16,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const REPO = process.env.PRD_REPO ?? 'yemuxue/code-review-agent';
+const CC_REPO = process.env.CC_REPO ?? 'yemuxue/colorcheck-pipeline';
 const BRANCH = process.env.PRD_BRANCH ?? 'main';
 const TOKEN = process.env.GITHUB_TOKEN;
 
@@ -25,6 +26,7 @@ const DOCS = path.resolve('public/docs/code-review-agent');
 const FIG_DIR = path.join(DOCS, 'figures');
 const SHOT_DIR = path.join(DOCS, 'shots');
 const USABILITY_OUT = path.resolve('src/pages/docs/code-review-agent/usability.md');
+const CC_OUT = path.resolve('src/content/notes/colorcheck-method.md');
 
 const FIGURES = [
   '01_F01_系统上下文.png', '02_F02_业务能力地图.png', '03_F03_角色与权限矩阵.png',
@@ -54,23 +56,23 @@ meta:
 `;
 
 /** raw 有 CDN 缓存，加时间戳强制取最新 */
-function rawUrl(relPath) {
+function rawUrl(relPath, repo = REPO) {
   const encoded = relPath.split('/').map(encodeURIComponent).join('/');
-  return `https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encoded}?t=${Date.now()}`;
+  return `https://raw.githubusercontent.com/${repo}/${BRANCH}/${encoded}?t=${Date.now()}`;
 }
 
 /** 备用源：jsDelivr 镜像，raw 拉取失败时兜底 */
-function jsdelivrUrl(relPath) {
+function jsdelivrUrl(relPath, repo = REPO) {
   const encoded = relPath.split('/').map(encodeURIComponent).join('/');
-  return `https://cdn.jsdelivr.net/gh/${REPO}@${BRANCH}/${encoded}`;
+  return `https://cdn.jsdelivr.net/gh/${repo}@${BRANCH}/${encoded}`;
 }
 
-async function fetchBuffer(relPath) {
+async function fetchBuffer(relPath, repo = REPO) {
   const headers = {
     'user-agent': 'xsssx-site-sync',
     ...(TOKEN ? { authorization: `Bearer ${TOKEN}` } : {}),
   };
-  for (const url of [rawUrl(relPath), jsdelivrUrl(relPath)]) {
+  for (const url of [rawUrl(relPath, repo), jsdelivrUrl(relPath, repo)]) {
     const res = await fetch(url, { headers });
     if (res.ok) return Buffer.from(await res.arrayBuffer());
   }
@@ -156,6 +158,21 @@ async function syncUsability() {
   console.log('[sync] 可用性报告已更新');
 }
 
+async function syncColorcheck() {
+  const buf = await withRetry('colorcheck 方法文章', () =>
+    fetchBuffer('01_正式文档/colorcheck-method.md', CC_REPO),
+  );
+  if (!buf) {
+    if (!existsSync(CC_OUT)) throw new Error('colorcheck 文章拉取失败且无本地副本');
+    console.warn('[sync] colorcheck 文章沿用已有文件');
+    return;
+  }
+  const text = buf.toString('utf8');
+  if (!text.startsWith('---')) throw new Error('colorcheck 文章缺少 frontmatter');
+  await writeFile(CC_OUT, text, 'utf8');
+  console.log('[sync] colorcheck 方法文章已更新');
+}
+
 // --assets-only：构建期只补图（prd.md / usability.md 由 workflow 提交，构建不覆盖）
 const assetsOnly = process.argv.includes('--assets-only');
 
@@ -164,6 +181,7 @@ if (assetsOnly) {
 } else {
   await syncPrd();
   await syncUsability();
+  await syncColorcheck();
 }
 await syncDir('图册', FIGURES, '', FIG_DIR);
 await syncDir('截图', SHOTS, '00_界面截图/', SHOT_DIR);
