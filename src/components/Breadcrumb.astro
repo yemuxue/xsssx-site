@@ -9,6 +9,22 @@ interface Props {
 }
 
 const { items } = Astro.props;
+
+// 结构化数据：让搜索结果能显示层级路径
+const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
+const currentUrl = new URL(Astro.url.pathname, origin).href;
+const trail = [{ label: '首页', href: '/' }, ...items];
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: trail.map((item, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: item.label,
+    item: item.href ? new URL(item.href, origin).href : currentUrl,
+  })),
+};
 ---
 
 <nav class="breadcrumb" aria-label="面包屑">
@@ -23,6 +39,8 @@ const { items } = Astro.props;
     }
   </ol>
 </nav>
+
+<script type="application/ld+json" set:html={JSON.stringify(breadcrumbJsonLd)} />
 
 <style>
   .breadcrumb {
