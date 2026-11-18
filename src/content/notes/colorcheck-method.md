@@ -123,4 +123,17 @@ Kimi 在欠曝下准确率还有 70.8%（灰阶还能蒙对），但 ΔE 从 2.4
 
 ---
 
+## 八、复现
+
+```bash
+# 起点：七个退化版本 + 基准图
+python3 experiments/colorcheck/probe.py --models kimi-k3,glm-5.3-flash,deepseek-v4.1-flash
+# 归因：同图不同问法 / 同问法不同图
+python3 experiments/colorcheck/experiment.py --mode ab
+```
+
+结果落在 `experiments/colorcheck/results/`，一条记录一次调用，可直接核对。
+
+---
+
 > 同步说明：本文由 colorcheck-pipeline 仓库同步到站点，改动请提到仓库。
