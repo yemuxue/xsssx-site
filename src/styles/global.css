@@ -1029,3 +1029,39 @@ html[data-theme='dark'] .icon-btn .moon {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* =========================================================
+   站内搜索
+   ========================================================= */
+    .search-results .hit a {
+      display: grid;
+      grid-template-columns: 3.2rem minmax(0, 1fr);
+      gap: 0.2rem 0.9rem;
+      padding: 1rem 1.1rem;
+      background: var(--bg-elev);
+      text-decoration: none;
+    }
+    .search-results .hit a:hover {
+      background: var(--bg-soft);
+    }
+    .search-results .hit-kind {
+      grid-row: span 3;
+      align-self: start;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      padding-top: 0.15rem;
+    }
+    .search-results .hit-title {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .search-results .hit-desc {
+      font-size: 0.88rem;
+      color: var(--text-soft);
+    }
+    .search-results .hit-meta {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }

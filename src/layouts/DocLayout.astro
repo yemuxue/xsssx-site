@@ -1,16 +1,21 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 
 const fm = Astro.props.frontmatter ?? {};
 const title = fm.title ?? '文档';
 const eyebrow = fm.eyebrow ?? '';
 const lede = fm.lede ?? '';
 const meta = fm.meta ?? [];
+const shortTitle = typeof title === 'string' && title.includes('·')
+  ? title.split('·').pop()?.trim() ?? title
+  : title;
 ---
 
 <BaseLayout title={title} description={lede} type="article">
   <main class="wrap">
     <header class="doc-hero">
+      <Breadcrumb items={[{ label: '作品', href: '/works/' }, { label: '可信代码审查 Agent', href: '/works/code-review-agent/' }, { label: shortTitle }]} />
       {eyebrow && <p class="eyebrow">{eyebrow}</p>}
       <h1>{title}</h1>
       {lede && <p class="lede">{lede}</p>}
