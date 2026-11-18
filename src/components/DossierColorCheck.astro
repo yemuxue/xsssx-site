@@ -81,6 +81,12 @@ const decisions = [
         <span>独立完成</span>
         <span>Python · 色彩科学 · 多模态评测</span>
       </div>
+      <p class="hero-read">
+        <a href="/notes/colorcheck-method/">
+          读方法：为什么我不训练模型，504 次调用后的一点结论
+          <span aria-hidden="true">→</span>
+        </a>
+      </p>
     </header>
 
     <section class="results" aria-label="核心结果">
@@ -294,6 +300,27 @@ const decisions = [
     padding: clamp(1.6rem, 4vw, 2.6rem) 0 2rem;
     border-bottom: 1px solid var(--border);
   }
+  .hero-read {
+    margin: 1.1rem 0 0;
+    font-size: 0.9rem;
+  }
+  .hero-read a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text-soft);
+    text-decoration: none;
+    transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background 0.15s var(--ease);
+  }
+  .hero-read a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
   .dossier-hero .eyebrow {
     font-family: var(--font-mono);
     font-size: 0.74rem;

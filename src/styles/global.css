@@ -802,10 +802,9 @@ html[data-theme='dark'] .icon-btn .moon {
 @media (min-width: 1024px) {
   .prose p > img {
     display: block;
-    width: min(72rem, calc(100vw - 5rem));
-    max-width: none;
-    margin-left: calc((100% - min(72rem, calc(100vw - 5rem))) / 2);
-    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
   }
 }
 
