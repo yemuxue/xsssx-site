@@ -32,6 +32,11 @@ tags: ['多模态评测', '方法论', '色彩科学']
 
 ## 二、实验怎么设计的
 
+![F01 实验设计](/docs/colorcheck/figures/01_F01_实验设计.png)
+
+*图 F01 · 一张色卡七个退化版本，两种问法，三个模型。*
+
+
 **第一步：造尺子。**
 先用 [colorcheck-pipeline](https://github.com/yemuxue/colorcheck-pipeline) 把色卡照片校正成标准色值，逐块算 CIEDE2000。单文件 1189 行，只用 numpy + Pillow，零 OpenCV。
 
@@ -47,6 +52,11 @@ tags: ['多模态评测', '方法论', '色彩科学']
 两套指标测两件事：**分类能力**和**测量能力**。
 
 ## 三、三个发现
+
+![C01 三模型结果矩阵](/docs/colorcheck/figures/02_C01_三模型结果矩阵.png)
+
+*图 C01 · 干净 / 强偏色 / 校正后，三个模型的准确率与色差。*
+
 
 **1. 强偏色是共同的分水岭。**
 
