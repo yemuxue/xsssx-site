@@ -78,7 +78,7 @@ const person = {
     <a class="skip-link" href="#main">跳到正文</a>
     <Header />
     <main id="main">
-      {Astro.url.pathname !== '/' && <BackNav />}
+      <BackNav />
       <slot />
     </main>
     <Footer />

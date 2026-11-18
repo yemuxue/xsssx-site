@@ -9,6 +9,7 @@ interface Props {
 }
 
 const { label = '返回上一页' } = Astro.props;
+const isHome = Astro.url.pathname === '/';
 
 // 没有历史（直接打开 / 外链进入）时，按栏目回退，而不是一律回首页
 const path = Astro.url.pathname;
@@ -22,13 +23,20 @@ const sectionFallback = path.startsWith('/notes/')
 const fallback = Astro.props.fallback ?? sectionFallback;
 ---
 
-<nav class="back-nav container" aria-label="返回">
+<nav class="back-nav container" aria-label="返回" data-back-nav hidden={isHome}>
   <a class="back-link" href={fallback} data-back>
     <span aria-hidden="true">←</span> {label}
   </a>
 </nav>
 
 <script>
+  // 首页默认不显示；从站内其它页面进来时才出现
+  const nav = document.querySelector('[data-back-nav]');
+  if (nav?.hasAttribute('hidden')) {
+    const ref = document.referrer ? new URL(document.referrer) : null;
+    if (ref?.origin === location.origin && history.length > 1) nav.removeAttribute('hidden');
+  }
+
   document.addEventListener('click', (event) => {
     const link = (event.target as HTMLElement).closest?.('a[data-back]');
     if (!link) return;
