@@ -44,9 +44,14 @@ const { items } = Astro.props;
     align-items: center;
     gap: 0.45rem;
   }
-  .breadcrumb li + li::before {
+  /* 分隔符跟在上一级末尾，换行时不会跑到行首 */
+  .breadcrumb li:not(:last-child)::after {
     content: '/';
+    margin-left: 0.45rem;
     color: var(--border-strong);
+  }
+  .breadcrumb li + li {
+    margin-left: 0;
   }
   .breadcrumb a {
     color: var(--muted);
@@ -57,5 +62,14 @@ const { items } = Astro.props;
   }
   .breadcrumb span {
     color: var(--text-soft);
+  }
+  /* 窄屏隐藏末级（当前页标题太长），只保留层级路径 */
+  @media (max-width: 640px) {
+    .breadcrumb li:last-child {
+      display: none;
+    }
+    .breadcrumb li:nth-last-child(2)::after {
+      content: none;
+    }
   }
 </style>
