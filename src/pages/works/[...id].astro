@@ -26,15 +26,25 @@ const dossierMap: Record<string, any> = {
 const Dossier = dossierMap[entry.id];
 ---
 
+<style>
+  .dossier-crumb {
+    padding-top: 1rem;
+  }
+</style>
+
 {
   Dossier ? (
     <BaseLayout title={title} description={description} type="article">
+      <div class="container dossier-crumb">
+        <Breadcrumb items={[{ label: '作品', href: '/works/' }, { label: title }]} />
+      </div>
       <Dossier />
     </BaseLayout>
   ) : (
     <BaseLayout title={title} description={description} type="article">
       <div class="page-head">
         <div class="container">
+          <Breadcrumb items={[{ label: '作品', href: '/works/' }, { label: title }]} />
           <h1 class="page-title">{title}</h1>
           {description && <p class="page-desc">{description}</p>}
           <div class="meta-bar">
