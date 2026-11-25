@@ -30,16 +30,10 @@ const CC_OUT = path.resolve('src/content/notes/colorcheck-method.md');
 
 // DOORS 系列：仓库 docs/*.md → 站点笔记（文件名即 URL）
 const DOORS_REPO = process.env.DOORS_REPO ?? 'yemuxue/doors-9.6-materials';
-const DOORS_DOCS = [
-  ['docs/需求工程全流程实践指南.md', 'doors-01-process.md'],
-  ['docs/使用文档.md', 'doors-02-chain.md'],
-  ['docs/核心功能操作手册.md', 'doors-03-operations.md'],
-  ['docs/DOORS-基线操作指南.md', 'doors-04-baseline.md'],
-];
-const DOORS_SHOTS = [
-  'db-tree.png', 'module.png', 'obj-attr.png', 'insert-column.png', 'matrix.png',
-  'obj-history.png', 'cr.png', 'cr-links.png', 'native-baseline-compare.png', 'v6data.png',
-];
+const DOORS_DOC = ['01_正式文档/DOORS-实践复盘.md', 'doors-practice.md'];
+const DOORS_FIGS = ['F01-需求流水线.png', 'F02-追溯与覆盖率.png', 'F03-基线与变更.png'];
+// 正文实际引用的截图
+const DOORS_SHOTS = ['db-tree.png', 'module.png', 'matrix.png'];
 
 // colorcheck 的图、封面与数据包：仓库路径 → 站点路径
 const CC_ASSETS = [
@@ -212,21 +206,34 @@ async function syncColorcheckAssets() {
 }
 
 async function syncDoors() {
-  let docs = 0;
-  for (const [src, dest] of DOORS_DOCS) {
-    const buf = await withRetry(`doors ${dest}`, () => fetchBuffer(src, DOORS_REPO));
-    if (!buf) continue;
-    const text = buf
-      .toString('utf8')
-      .replaceAll('](../screenshots/', '](/docs/doors/screenshots/');
-    if (!text.startsWith('---')) {
-      console.warn(`[sync] doors ${dest} 缺少 frontmatter，跳过`);
-      continue;
-    }
-    await writeFile(path.resolve('src/content/notes', dest), text, 'utf8');
-    docs += 1;
+  const [src, dest] = DOORS_DOC;
+  const buf = await withRetry(`doors ${dest}`, () => fetchBuffer(src, DOORS_REPO));
+  if (!buf) {
+    console.warn('[sync] doors 文章沿用已有文件');
+    return;
   }
-  console.log(`[sync] doors 文章 ${docs}/${DOORS_DOCS.length}`);
+  const text = buf
+    .toString('utf8')
+    .replaceAll('](../screenshots/', '](/docs/doors/screenshots/');
+  if (!text.startsWith('---')) throw new Error('doors 文章缺少 frontmatter');
+  await writeFile(path.resolve('src/content/notes', dest), text, 'utf8');
+  console.log('[sync] doors 文章已更新');
+}
+
+async function syncDoorsFigures() {
+  const dir = path.resolve('public/docs/doors/figures');
+  await mkdir(dir, { recursive: true });
+  let ok = 0;
+  for (const name of DOORS_FIGS) {
+    const buf = await withRetry(`doors 图 ${name}`, () =>
+      fetchBuffer(`02_核心图_PNG/${name}`, DOORS_REPO),
+    );
+    if (buf) {
+      await writeFile(path.join(dir, name), buf);
+      ok += 1;
+    }
+  }
+  console.log(`[sync] doors 图 ${ok}/${DOORS_FIGS.length}`);
 }
 
 async function syncDoorsShots() {
@@ -260,3 +267,4 @@ await syncDir('图册', FIGURES, '', FIG_DIR);
 await syncDir('截图', SHOTS, '00_界面截图/', SHOT_DIR);
 await syncColorcheckAssets();
 await syncDoorsShots();
+await syncDoorsFigures();
