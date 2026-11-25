@@ -28,6 +28,19 @@ const SHOT_DIR = path.join(DOCS, 'shots');
 const USABILITY_OUT = path.resolve('src/pages/docs/code-review-agent/usability.md');
 const CC_OUT = path.resolve('src/content/notes/colorcheck-method.md');
 
+// DOORS 系列：仓库 docs/*.md → 站点笔记（文件名即 URL）
+const DOORS_REPO = process.env.DOORS_REPO ?? 'yemuxue/doors-9.6-materials';
+const DOORS_DOCS = [
+  ['docs/需求工程全流程实践指南.md', 'doors-01-process.md'],
+  ['docs/使用文档.md', 'doors-02-chain.md'],
+  ['docs/核心功能操作手册.md', 'doors-03-operations.md'],
+  ['docs/DOORS-基线操作指南.md', 'doors-04-baseline.md'],
+];
+const DOORS_SHOTS = [
+  'db-tree.png', 'module.png', 'obj-attr.png', 'insert-column.png', 'matrix.png',
+  'obj-history.png', 'cr.png', 'cr-links.png', 'native-baseline-compare.png', 'v6data.png',
+];
+
 // colorcheck 的图、封面与数据包：仓库路径 → 站点路径
 const CC_ASSETS = [
   ['02_核心图_PNG/00_封面.png', 'public/covers/colorcheck/cover.png'],
@@ -198,6 +211,40 @@ async function syncColorcheckAssets() {
   console.log(`[sync] colorcheck 资源 ${ok}/${CC_ASSETS.length}`);
 }
 
+async function syncDoors() {
+  let docs = 0;
+  for (const [src, dest] of DOORS_DOCS) {
+    const buf = await withRetry(`doors ${dest}`, () => fetchBuffer(src, DOORS_REPO));
+    if (!buf) continue;
+    const text = buf
+      .toString('utf8')
+      .replaceAll('](../screenshots/', '](/docs/doors/screenshots/');
+    if (!text.startsWith('---')) {
+      console.warn(`[sync] doors ${dest} 缺少 frontmatter，跳过`);
+      continue;
+    }
+    await writeFile(path.resolve('src/content/notes', dest), text, 'utf8');
+    docs += 1;
+  }
+  console.log(`[sync] doors 文章 ${docs}/${DOORS_DOCS.length}`);
+}
+
+async function syncDoorsShots() {
+  const dir = path.resolve('public/docs/doors/screenshots');
+  await mkdir(dir, { recursive: true });
+  let ok = 0;
+  for (const name of DOORS_SHOTS) {
+    const buf = await withRetry(`doors 截图 ${name}`, () =>
+      fetchBuffer(`screenshots/${name}`, DOORS_REPO),
+    );
+    if (buf) {
+      await writeFile(path.join(dir, name), buf);
+      ok += 1;
+    }
+  }
+  console.log(`[sync] doors 截图 ${ok}/${DOORS_SHOTS.length}`);
+}
+
 // --assets-only：构建期只补图（prd.md / usability.md 由 workflow 提交，构建不覆盖）
 const assetsOnly = process.argv.includes('--assets-only');
 
@@ -207,7 +254,9 @@ if (assetsOnly) {
   await syncPrd();
   await syncUsability();
   await syncColorcheck();
+  await syncDoors();
 }
 await syncDir('图册', FIGURES, '', FIG_DIR);
 await syncDir('截图', SHOTS, '00_界面截图/', SHOT_DIR);
 await syncColorcheckAssets();
+await syncDoorsShots();

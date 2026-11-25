@@ -31,3 +31,6 @@ public/docs/code-review-agent/usability.html
 public/data/colorcheck/
 public/covers/colorcheck/
 public/docs/colorcheck/
+
+# doors 截图构建时拉取
+public/docs/doors/

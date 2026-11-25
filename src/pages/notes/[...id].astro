@@ -114,7 +114,15 @@ const older = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
     .note-toc {
       position: sticky;
       top: 88px;
+      max-height: calc(100vh - 7rem);
+      overflow-y: auto;
       font-size: 0.82rem;
+      scrollbar-width: thin;
+    }
+    .note-toc .toc-d3 a {
+      padding-left: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
     }
     .note-toc-title {
       margin: 0 0 0.6rem;

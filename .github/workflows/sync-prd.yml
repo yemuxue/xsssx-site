@@ -25,7 +25,7 @@ jobs:
 
       - name: 有变化则提交
         run: |
-          FILES="src/pages/docs/code-review-agent/prd.md src/pages/docs/code-review-agent/usability.md src/content/notes/colorcheck-method.md"
+          FILES="src/pages/docs/code-review-agent/prd.md src/pages/docs/code-review-agent/usability.md src/content/notes/colorcheck-method.md src/content/notes/doors-01-process.md src/content/notes/doors-02-chain.md src/content/notes/doors-03-operations.md src/content/notes/doors-04-baseline.md"
           if git diff --quiet -- $FILES; then
             echo "文档无变化，跳过提交"
             exit 0
