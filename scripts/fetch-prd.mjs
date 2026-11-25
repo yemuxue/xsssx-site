@@ -33,7 +33,7 @@ const DOORS_REPO = process.env.DOORS_REPO ?? 'yemuxue/doors-9.6-materials';
 const DOORS_DOC = ['01_正式文档/DOORS-实践复盘.md', 'doors-practice.md'];
 const DOORS_FIGS = ['F01-需求流水线.png', 'F02-追溯与覆盖率.png', 'F03-基线与变更.png'];
 // 正文实际引用的截图
-const DOORS_SHOTS = ['db-tree.png', 'module.png', 'matrix.png'];
+const DOORS_SHOTS = ['db-tree.png', 'module.png', 'matrix.png', 'native-baseline-compare.png'];
 
 // colorcheck 的图、封面与数据包：仓库路径 → 站点路径
 const CC_ASSETS = [
