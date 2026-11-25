@@ -7,8 +7,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/check-assets.mjs",
-    "preview": "astro preview",
-    "prebuild": "node scripts/fetch-prd.mjs --assets-only"
+    "preview": "astro preview"
   },
   "dependencies": {
     "astro": "7.4.11"
